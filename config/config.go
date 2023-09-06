@@ -48,8 +48,19 @@ var _cfg Config
 func Init() (cfg Config, err error) {
 	// 加载配置文件
 	pwd, _ := os.Getwd()
+
+	filename := pwd + "/config/config.yml"
+	_, err = os.Stat(filename)
+	if os.IsNotExist(err) {
+		log.Fatal().Err(err).Str("filename", filename).Msg("文件不存在")
+		return
+	} else if err != nil {
+		log.Fatal().Err(err).Str("filename", filename).Msg("文件错误")
+		return
+	}
+
 	var f *os.File
-	f, err = os.Open(pwd + "/config.yml")
+	f, err = os.Open(filename)
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("打开配置文件失败")

@@ -1,6 +1,6 @@
 #bin/bash
 # mkdir ./bin
 rm -r ./bin/*
-cp ./config/config.yml ./bin/
+mkdir -p ./bin/config && cp ./config/config.yml ./bin/config/
 
 swag init -g /handler/router.go -o ../jim-docs/docs
