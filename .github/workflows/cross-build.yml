@@ -22,7 +22,9 @@ jobs:
       - name: 初始化环境
         env:
           DEBIAN_FRONTEND: noninteractive
-        run: | 
+        run: |
+          sudo -E apt-get -qq update
+          sudo -E apt-get -qq install zip unzip
           sudo snap refresh
           sudo snap install go --classic
 
@@ -34,41 +36,37 @@ jobs:
         id: compile
         working-directory: ./
         run: |
-          echo "darwin-amd64 编译中... "
-          CGO_ENABLED=0 GOOS=darwin   GOARCH=amd64    go build -o ./bin/jim-darwin-amd64    ./*.go
-          echo "darwin-arm64 编译中... "
-          CGO_ENABLED=0 GOOS=darwin   GOARCH=arm64    go build -o ./bin/jim-darwin-arm64    ./*.go
           
-          echo "freebsd-386 编译中... "
-          CGO_ENABLED=0 GOOS=freebsd  GOARCH=386      go build -o ./bin/jim-freebsd-386     ./*.go
-          echo "freebsd-amd64 编译中... "
-          CGO_ENABLED=0 GOOS=freebsd  GOARCH=amd64    go build -o ./bin/jim-freebsd-amd64   ./*.go
-          echo "freebsd-arm 编译中... "
-          CGO_ENABLED=0 GOOS=freebsd  GOARCH=arm      go build -o ./bin/jim-freebsd-arm     ./*.go
-          echo "freebsd-arm64 编译中... "
-          CGO_ENABLED=0 GOOS=freebsd  GOARCH=arm64    go build -o ./bin/jim-freebsd-arm64   ./*.go
+          function build_func {
+            suffix=""
+            if [ "$1" = "windows" ] ; then
+            suffix=".exe"
+            fi
+            echo "编译OS:$1 ARCH:$2 ..."
+            echo "CGO_ENABLED=0 GOOS=$1   GOARCH=$2    go build -o ./bin/jim-$1-$2${suffix}    ./*.go"
+            CGO_ENABLED=0 GOOS=$1   GOARCH=$2    go build -o ./bin/jim-$1-$2{suffix}    ./*.go
+          }
           
+          darwin_arch=("amd64" "arm64")
+          for ((i=0; i<${#darwin_arch[@]}; i++)); do
+            build_func darwin ${darwin_arch[$i]}
+          done
           
-          echo "linux-386 编译中... "
-          CGO_ENABLED=0 GOOS=linux    GOARCH=386      go build -o ./bin/jim-linux-386       ./*.go
-          echo "linux-amd64 编译中... "
-          CGO_ENABLED=0 GOOS=linux    GOARCH=amd64    go build -o ./bin/jim-linux-amd64     ./*.go
-          echo "linux-arm 编译中... "
-          CGO_ENABLED=0 GOOS=linux    GOARCH=arm      go build -o ./bin/jim-linux-arm       ./*.go
-          echo "linux-arm64 编译中... "
-          CGO_ENABLED=0 GOOS=linux    GOARCH=arm64    go build -o ./bin/jim-linux-arm64     ./*.go
-          echo "linux-mips 编译中... "
-          CGO_ENABLED=0 GOOS=linux    GOARCH=mips     go build -o ./bin/jim-linux-mips      ./*.go
-          echo "linux-mips64 编译中... "
-          CGO_ENABLED=0 GOOS=linux    GOARCH=mips64   go build -o ./bin/jim-linux-mips64    ./*.go
-          echo "linux-386 编译中... "
-          CGO_ENABLED=0 GOOS=windows  GOARCH=386      go build -o ./bin/jim-windows-386     ./*.go
-          echo "linux-amd64 编译中... "
-          CGO_ENABLED=0 GOOS=windows  GOARCH=amd64    go build -o ./bin/jim-windows-amd64   ./*.go
-          echo "linux-arm 编译中... "
-          CGO_ENABLED=0 GOOS=windows  GOARCH=arm      go build -o ./bin/jim-windows-arm     ./*.go
-          echo "linux-arm64 编译中... "
-          CGO_ENABLED=0 GOOS=windows  GOARCH=arm64    go build -o ./bin/jim-windows-arm64   ./*.go
+          freebsd_arch=("386" "amd64" "arm" "arm64")
+          for ((i=0; i<${#freebsd_arch[@]}; i++)); do
+            build_func freebsd ${freebsd_arch[$i]}
+          done
+          
+          linux_arch=("386" "amd64" "arm" "arm64" "mips" "mips64")
+          for ((i=0; i<${#linux_arch[@]}; i++)); do
+            build_func linux ${linux_arch[$i]}
+          done
+          
+          windows_arch=("386" "amd64" "arm" "arm64")
+          for ((i=0; i<${#windows_arch[@]}; i++)); do
+            build_func windows ${windows_arch[$i]}
+          done
+  
           echo "status=success" >> $GITHUB_OUTPUT
 
       - name: 整理文件
@@ -79,6 +77,15 @@ jobs:
           mkdir ./config
           cp ../config/config.yml ./config/config.yml
           cp -rd ../sql ./
+          
+          bin_arrays=($(ls jim-*))
+          
+          for ((i=0; i<${#bin_arrays[@]}; i++)); do
+           zip_name=$(echo ${bin_arrays[$i]}|awk -F '-' '{print $2"-"$3}'|awk -F'.' '{print $1}')
+           zip -r ${zip_name}.zip ./${bin_arrays[$i]} ./config/ ./sql/
+          done
+          
+          
           echo "status=success" >> $GITHUB_OUTPUT
 
       - name: 发布已编译固件
