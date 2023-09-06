@@ -1,0 +1,18 @@
+main:
+  # jwt_signing_key 用于JWT,如果修改,将影响到已登录用户验证
+  jwt_signing_key: "my_secret_key"
+
+http:
+  port: 8080
+
+redis:
+  addrs:
+    - "192.168.31.101:6379"
+  password: "root"
+
+mysql:
+  uri: "root:root@tcp(192.168.31.101:3306)/?charset=utf8&parseTime=true&loc=Local"
+
+mongodb:
+  uri: "mongodb://192.168.31.101:27017,192.168.31.101:27018,192.168.31.101:27019/jb_im?replicaSet=rs0&authSource=admin&readPreference=secondary"
+
