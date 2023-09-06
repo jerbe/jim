@@ -98,7 +98,7 @@ jobs:
         working-directory: ./
         run: |
           localPath=$(pwd)
-          swag init -g ./handler/router.go
+          $(go env GOPATH)/bin/swag init -g ./handler/router.go
           cd ../
           git clone -b main https://github.com/jerbe/jim-docs.git jim-docs
           cp -r ${localPath}/docs/ ./jim-docs/docs/
