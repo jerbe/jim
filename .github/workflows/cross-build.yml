@@ -51,25 +51,26 @@ jobs:
             CGO_ENABLED=0 GOOS=$1   GOARCH=$2    go build -o ./bin/jim-$1-$2${suffix}    ./*.go
           }
           
-          darwin_arch=("amd64" "arm64")
-          for ((i=0; i<${#darwin_arch[@]}; i++)); do
-            build_func darwin ${darwin_arch[$i]}
-          done
+          #darwin_arch=("amd64" "arm64")
+          #for ((i=0; i<${#darwin_arch[@]}; i++)); do
+          #  build_func darwin ${darwin_arch[$i]}
+          #done
           
-          freebsd_arch=("386" "amd64" "arm" "arm64")
-          for ((i=0; i<${#freebsd_arch[@]}; i++)); do
-            build_func freebsd ${freebsd_arch[$i]}
-          done
+          #freebsd_arch=("386" "amd64" "arm" "arm64")
+          #for ((i=0; i<${#freebsd_arch[@]}; i++)); do
+          #  build_func freebsd ${freebsd_arch[$i]}
+          #done
           
-          linux_arch=("386" "amd64" "arm" "arm64" "mips" "mips64")
+          #linux_arch=("386" "amd64" "arm" "arm64" "mips" "mips64")
+          linux_arch=("386" "amd64")
           for ((i=0; i<${#linux_arch[@]}; i++)); do
             build_func linux ${linux_arch[$i]}
           done
           
-          windows_arch=("386" "amd64" "arm" "arm64")
-          for ((i=0; i<${#windows_arch[@]}; i++)); do
-            build_func windows ${windows_arch[$i]}
-          done
+          #windows_arch=("386" "amd64" "arm" "arm64")
+          #for ((i=0; i<${#windows_arch[@]}; i++)); do
+          #  build_func windows ${windows_arch[$i]}
+          #done
           
           echo "status=success" >> $GITHUB_OUTPUT
 
@@ -104,16 +105,16 @@ jobs:
           echo 'git add .'
           git add .
           
-          echo 'git tag "${{ github.event.inputs.version }}'
+          echo -e 'git tag "${{ github.event.inputs.version }}"'
           git tag ${{ github.event.inputs.version }}
           
-          echo 'git commit -am "${{ github.event.inputs.version }}'
+          echo -e 'git commit -am "${{ github.event.inputs.version }}"'
           git commit -am "${{ github.event.inputs.version }}"
           
-          echo 'git push "https://${{ secrets.ACCESS_TOKEN }}@github.com/jerbe/jim-docs.git" HEAD:main'
+          echo -e 'git push "https://${{ secrets.ACCESS_TOKEN }}@github.com/jerbe/jim-docs.git" HEAD:main'
           git push "https://${{ secrets.ACCESS_TOKEN }}@github.com/jerbe/jim-docs.git" HEAD:main
           
-          echo 'git push --force origin ${{ github.event.inputs.version }}'
+          echo -e 'git push --force origin ${{ github.event.inputs.version }}'
           git push --force origin ${{ github.event.inputs.version }}  
       
 
