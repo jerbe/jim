@@ -27,6 +27,7 @@ jobs:
           sudo -E apt-get -qq install zip unzip
           sudo snap refresh
           sudo snap install go --classic
+          go install github.com/swaggo/swag/cmd/swag@latest
 
       - name: 下载依赖
         run: |
@@ -40,11 +41,11 @@ jobs:
           function build_func {
             suffix=""
             if [ "$1" = "windows" ] ; then
-            suffix=".exe"
+              suffix=".exe"
             fi
             echo "编译OS:$1 ARCH:$2 ..."
             echo "CGO_ENABLED=0 GOOS=$1   GOARCH=$2    go build -o ./bin/jim-$1-$2${suffix}    ./*.go"
-            CGO_ENABLED=0 GOOS=$1   GOARCH=$2    go build -o ./bin/jim-$1-$2{suffix}    ./*.go
+            CGO_ENABLED=0 GOOS=$1   GOARCH=$2    go build -o ./bin/jim-$1-$2${suffix}    ./*.go
           }
           
           darwin_arch=("amd64" "arm64")
@@ -66,8 +67,14 @@ jobs:
           for ((i=0; i<${#windows_arch[@]}; i++)); do
             build_func windows ${windows_arch[$i]}
           done
-  
+          
+          
+          swag init -g ./handler/router.go
+          
+          git clone
+          
           echo "status=success" >> $GITHUB_OUTPUT
+
 
       - name: 整理文件
         id: organize
@@ -79,14 +86,30 @@ jobs:
           cp -rd ../sql ./
           
           bin_arrays=($(ls jim-*))
-          
           for ((i=0; i<${#bin_arrays[@]}; i++)); do
            zip_name=$(echo ${bin_arrays[$i]}|awk -F '-' '{print $2"-"$3}'|awk -F'.' '{print $1}')
            zip -r ${zip_name}.zip ./${bin_arrays[$i]} ./config/ ./sql/
-          done
-          
-          
+          done          
           echo "status=success" >> $GITHUB_OUTPUT
+
+      - name: 生成文档
+        id: gendocs
+        if: steps.organize.outputs.status == 'success' && !cancelled()
+        working-directory: ./
+        run: |
+          localPath=$(pwd)
+          swag init -g ./handler/router.go
+          cd ../
+          git clone -b main https://github.com/jerbe/jim-docs.git jim-docs
+          cp -r ${localPath}/docs/ ./jim-docs/docs/
+          cd jim-docs
+          
+          git add .
+          git tag ${{ github.event.inputs.version }}
+          git commit -am "${{ github.event.inputs.version }}"
+          git push --quiet "https://${{ github.token }}@github.com/jerbe/jim-docs.git" HEAD:main
+          git push --force origin ${{ github.event.inputs.version }}  
+      
 
       - name: 发布已编译固件
         uses: ncipollo/release-action@main
