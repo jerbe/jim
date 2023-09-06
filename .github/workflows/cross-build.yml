@@ -108,6 +108,9 @@ jobs:
           cp -r ${localPath}/docs ./jim-docs/
           
           cd jim-docs
+          
+          echo "列出文件"
+          ls
           git status --porcelain
           
           if git status --porcelain | grep .; then
@@ -125,7 +128,7 @@ jobs:
             echo "没有东西需要提交"
             exit 0
           fi || exit 0
-      - name: 发布已编译固件
+      - name: 发布到release
         uses: ncipollo/release-action@main
         if: ${{ steps.organize.outputs.status }} == 'success' && !cancelled()
         with:
