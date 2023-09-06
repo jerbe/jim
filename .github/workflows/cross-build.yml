@@ -26,33 +26,48 @@ jobs:
           sudo snap refresh
           sudo snap install go --classic
 
-      - name: 克隆源代码
-        env:
-          REPO_URL: https://github.com/jerbe/jim
-          REPO_BRANCH: main
+      - name: 下载依赖
         run: |
-          git clone --depth 1 $REPO_URL -b $REPO_BRANCH jim
-          cd jim
+          go mod tidy
 
       - name: 开始编译
         id: compile
         working-directory: ./
         run: |
+          echo "darwin-amd64 编译中... "
           CGO_ENABLED=0 GOOS=darwin   GOARCH=amd64    go build -o ./bin/jim-darwin-amd64    ./*.go
+          echo "darwin-arm64 编译中... "
           CGO_ENABLED=0 GOOS=darwin   GOARCH=arm64    go build -o ./bin/jim-darwin-arm64    ./*.go
-          CGO_ENABLED=0 GOOS=freebsd  GOARCH=amd64    go build -o ./bin/jim-freebsd-amd64   ./*.go
-          CGO_ENABLED=0 GOOS=freebsd  GOARCH=arm      go build -o ./bin/jim-freebsd-arm     ./*.go
-          CGO_ENABLED=0 GOOS=freebsd  GOARCH=arm64    go build -o ./bin/jim-freebsd-arm64   ./*.go
+          
+          echo "freebsd-386 编译中... "
           CGO_ENABLED=0 GOOS=freebsd  GOARCH=386      go build -o ./bin/jim-freebsd-386     ./*.go
+          echo "freebsd-amd64 编译中... "
+          CGO_ENABLED=0 GOOS=freebsd  GOARCH=amd64    go build -o ./bin/jim-freebsd-amd64   ./*.go
+          echo "freebsd-arm 编译中... "
+          CGO_ENABLED=0 GOOS=freebsd  GOARCH=arm      go build -o ./bin/jim-freebsd-arm     ./*.go
+          echo "freebsd-arm64 编译中... "
+          CGO_ENABLED=0 GOOS=freebsd  GOARCH=arm64    go build -o ./bin/jim-freebsd-arm64   ./*.go
+          
+          
+          echo "linux-386 编译中... "
           CGO_ENABLED=0 GOOS=linux    GOARCH=386      go build -o ./bin/jim-linux-386       ./*.go
+          echo "linux-amd64 编译中... "
           CGO_ENABLED=0 GOOS=linux    GOARCH=amd64    go build -o ./bin/jim-linux-amd64     ./*.go
+          echo "linux-arm 编译中... "
           CGO_ENABLED=0 GOOS=linux    GOARCH=arm      go build -o ./bin/jim-linux-arm       ./*.go
+          echo "linux-arm64 编译中... "
           CGO_ENABLED=0 GOOS=linux    GOARCH=arm64    go build -o ./bin/jim-linux-arm64     ./*.go
+          echo "linux-mips 编译中... "
           CGO_ENABLED=0 GOOS=linux    GOARCH=mips     go build -o ./bin/jim-linux-mips      ./*.go
+          echo "linux-mips64 编译中... "
           CGO_ENABLED=0 GOOS=linux    GOARCH=mips64   go build -o ./bin/jim-linux-mips64    ./*.go
+          echo "linux-386 编译中... "
           CGO_ENABLED=0 GOOS=windows  GOARCH=386      go build -o ./bin/jim-windows-386     ./*.go
+          echo "linux-amd64 编译中... "
           CGO_ENABLED=0 GOOS=windows  GOARCH=amd64    go build -o ./bin/jim-windows-amd64   ./*.go
+          echo "linux-arm 编译中... "
           CGO_ENABLED=0 GOOS=windows  GOARCH=arm      go build -o ./bin/jim-windows-arm     ./*.go
+          echo "linux-arm64 编译中... "
           CGO_ENABLED=0 GOOS=windows  GOARCH=arm64    go build -o ./bin/jim-windows-arm64   ./*.go
           echo "status=success" >> $GITHUB_OUTPUT
 
