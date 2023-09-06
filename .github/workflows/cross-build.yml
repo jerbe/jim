@@ -29,14 +29,14 @@ jobs:
       - name: 克隆源代码
         env:
           REPO_URL: https://github.com/jerbe/jim
-          REPO_BRANCH: master
+          REPO_BRANCH: main
         run: |
           git clone --depth 1 $REPO_URL -b $REPO_BRANCH jim
           cd jim
 
       - name: 开始编译
         id: compile
-        working-directory: ./jim
+        working-directory: ./
         run: |
           CGO_ENABLED=0 GOOS=darwin   GOARCH=amd64    go build -o ./bin/jim-darwin-amd64    ./*.go
           CGO_ENABLED=0 GOOS=darwin   GOARCH=arm64    go build -o ./bin/jim-darwin-arm64    ./*.go
@@ -59,7 +59,7 @@ jobs:
       - name: 整理文件
         id: organize
         if: steps.compile.outputs.status == 'success' && !cancelled()
-        working-directory: ./jim/bin
+        working-directory: ./bin
         run: |
           mkdir ./config
           cp ../config/config.yml ./config/config.yml
@@ -72,7 +72,7 @@ jobs:
         with:
           tag: ${{ github.event.inputs.version}}
           name: ${{ github.event.inputs.version}}
-          artifacts: ./jim/bin/*
+          artifacts: ./bin/*
           allowUpdates: true
           body: |
             * JIM 简单的聊天系统
