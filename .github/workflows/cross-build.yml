@@ -104,7 +104,7 @@ jobs:
           git add .
           git tag ${{ github.event.inputs.version }}
           git commit -am "${{ github.event.inputs.version }}"
-          git push --quiet "https://${{ github.token }}@github.com/jerbe/jim-docs.git" HEAD:main
+          git push --quiet "https://${{ secrets.ACCESS_TOKEN }}@github.com/jerbe/jim-docs.git" HEAD:main
           git push --force origin ${{ github.event.inputs.version }}  
       
 
