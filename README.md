@@ -1,6 +1,15 @@
 # JIM 一个简单的聊天系统
 *(本代码仅供学习,严禁用于非法行为)*
 
+![](https://img.shields.io/github/actions/workflow/status/jerbe/jim/cross-build.yml)
+![](https://img.shields.io/github/issues/jerbe/jim?color=green)
+![](https://img.shields.io/github/stars/jerbe/jim?color=yellow)
+![](https://img.shields.io/github/forks/jerbe/jim?color=orange)
+![](https://img.shields.io/github/license/jerbe/jim?color=ff69b4)
+![](https://img.shields.io/github/languages/count/jerbe/jim)
+![](https://img.shields.io/github/languages/code-size/jerbe/jim?color=blueviolet)
+
+
 ## 简介
 JIM 是一个轻量的聊天系统，
 
