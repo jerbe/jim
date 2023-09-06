@@ -93,7 +93,7 @@ jobs:
           done          
           echo "status=success" >> $GITHUB_OUTPUT
 
-      - name: 生成文档
+      - name: 生成swag文档
         id: gendocs
         if: steps.organize.outputs.status == 'success' && !cancelled()
         working-directory: ./
@@ -102,9 +102,13 @@ jobs:
           $(go env GOPATH)/bin/swag init -g ./handler/router.go
           cd ../
           git clone -b main https://github.com/jerbe/jim-docs.git jim-docs
-          cp -r ${localPath}/docs/ ./jim-docs/
-          cd jim-docs
           
+          echo "当前路径$(pwd), localPath:${localPath}"
+          echo "cp -r ${localPath}/docs ./jim-docs/"
+          cp -r ${localPath}/docs ./jim-docs/
+          
+          cd jim-docs
+          git status --porcelain
           
           if git status --porcelain | grep .; then
             echo "添加更改文件"
