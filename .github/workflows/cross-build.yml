@@ -101,10 +101,19 @@ jobs:
           cp -r ${localPath}/docs/ ./jim-docs/docs/
           cd jim-docs
           
+          echo git add .
           git add .
+          
+          echo git tag "${{ github.event.inputs.version }}
           git tag ${{ github.event.inputs.version }}
+          
+          echo git commit -am "${{ github.event.inputs.version }}
           git commit -am "${{ github.event.inputs.version }}"
-          git push --quiet "https://${{ secrets.ACCESS_TOKEN }}@github.com/jerbe/jim-docs.git" HEAD:main
+          
+          echo git push "https://${{ secrets.ACCESS_TOKEN }}@github.com/jerbe/jim-docs.git" HEAD:main
+          git push "https://${{ secrets.ACCESS_TOKEN }}@github.com/jerbe/jim-docs.git" HEAD:main
+          
+          echo git push --force origin ${{ github.event.inputs.version }}
           git push --force origin ${{ github.event.inputs.version }}  
       
 
