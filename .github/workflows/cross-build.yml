@@ -68,13 +68,7 @@ jobs:
             build_func windows ${windows_arch[$i]}
           done
           
-          
-          swag init -g ./handler/router.go
-          
-          git clone
-          
           echo "status=success" >> $GITHUB_OUTPUT
-
 
       - name: 整理文件
         id: organize
