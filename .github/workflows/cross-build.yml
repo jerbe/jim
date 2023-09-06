@@ -94,7 +94,7 @@ jobs:
         with:
           tag: ${{ github.event.inputs.version}}
           name: ${{ github.event.inputs.version}}
-          artifacts: ./bin/
+          artifacts: ./bin/*.zip
           allowUpdates: true
           body: |
             * JIM 简单的聊天系统
