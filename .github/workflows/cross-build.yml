@@ -51,26 +51,29 @@ jobs:
             CGO_ENABLED=0 GOOS=$1   GOARCH=$2    go build -o ./bin/jim-$1-$2${suffix}    ./*.go
           }
           
-          #darwin_arch=("amd64" "arm64")
-          #for ((i=0; i<${#darwin_arch[@]}; i++)); do
-          #  build_func darwin ${darwin_arch[$i]}
-          #done
+          echo "开始编译[darwin]环境执行文件"
+          darwin_arch=("amd64" "arm64")
+          for ((i=0; i<${#darwin_arch[@]}; i++)); do
+            build_func darwin ${darwin_arch[$i]}
+          done
           
-          #freebsd_arch=("386" "amd64" "arm" "arm64")
-          #for ((i=0; i<${#freebsd_arch[@]}; i++)); do
-          #  build_func freebsd ${freebsd_arch[$i]}
-          #done
+          echo "开始编译[freebsd]环境执行文件"
+          freebsd_arch=("386" "amd64" "arm" "arm64")
+          for ((i=0; i<${#freebsd_arch[@]}; i++)); do
+            build_func freebsd ${freebsd_arch[$i]}
+          done
           
-          #linux_arch=("386" "amd64" "arm" "arm64" "mips" "mips64")
-          linux_arch=("386" "amd64")
+          echo "开始编译[linux]环境执行文件"
+          linux_arch=("386" "amd64" "arm" "arm64" "mips" "mips64")
           for ((i=0; i<${#linux_arch[@]}; i++)); do
             build_func linux ${linux_arch[$i]}
           done
           
-          #windows_arch=("386" "amd64" "arm" "arm64")
-          #for ((i=0; i<${#windows_arch[@]}; i++)); do
-          #  build_func windows ${windows_arch[$i]}
-          #done
+          echo "开始编译[windows]环境执行文件"
+          windows_arch=("386" "amd64" "arm" "arm64")
+          for ((i=0; i<${#windows_arch[@]}; i++)); do
+            build_func windows ${windows_arch[$i]}
+          done
           
           echo "status=success" >> $GITHUB_OUTPUT
 
@@ -103,18 +106,18 @@ jobs:
           cd jim-docs
           
           if git status --porcelain | grep .; then
-            echo "add file"
+            echo "添加更改文件"
             git add .
-            echo "add tag"
+            echo "添加标签"
             git tag ${{ github.event.inputs.version }}
-            echo "commit change"
+            echo "提交更改"
             git commit -am "${{ github.event.inputs.version }}"
-            echo "push code"
+            echo "推送代码"
             git push "https://${{ secrets.ACCESS_TOKEN }}@github.com/jerbe/jim-docs.git" HEAD:main
-            echo "push tag"
+            echo "推送标签(tag)"
             git push --force origin ${{ github.event.inputs.version }}  
           else
-            echo "nothing to commit"
+            echo "没有东西需要提交"
             exit 0
           fi || exit 0
       - name: 发布已编译固件
