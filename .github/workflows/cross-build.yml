@@ -14,7 +14,7 @@ jobs:
   buile_openwrt:
     runs-on: Ubuntu-20.04
     if: github.event.repository.owner.id == github.event.sender.id
-    name: 构建项目}
+    name: 构建项目
     steps:
       - name: 检查
         uses: actions/checkout@main
@@ -24,7 +24,7 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: | 
           sudo snap refresh
-          sudo snap install go
+          sudo snap install go --classic
 
       - name: 克隆源代码
         env:
