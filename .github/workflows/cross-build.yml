@@ -102,22 +102,21 @@ jobs:
           cp -r ${localPath}/docs/ ./jim-docs/docs/
           cd jim-docs
           
-          echo 'git add .'
-          git add .
-          
-          echo -e 'git tag "${{ github.event.inputs.version }}"'
-          git tag ${{ github.event.inputs.version }}
-          
-          echo -e 'git commit -am "${{ github.event.inputs.version }}"'
-          git commit -am "${{ github.event.inputs.version }}"
-          
-          echo -e 'git push "https://${{ secrets.ACCESS_TOKEN }}@github.com/jerbe/jim-docs.git" HEAD:main'
-          git push "https://${{ secrets.ACCESS_TOKEN }}@github.com/jerbe/jim-docs.git" HEAD:main
-          
-          echo -e 'git push --force origin ${{ github.event.inputs.version }}'
-          git push --force origin ${{ github.event.inputs.version }}  
-      
-
+          if git status --porcelain | grep .; then
+            echo "add file"
+            git add .
+            echo "add tag"
+            git tag ${{ github.event.inputs.version }}
+            echo "commit change"
+            git commit -am "${{ github.event.inputs.version }}"
+            echo "push code"
+            git push "https://${{ secrets.ACCESS_TOKEN }}@github.com/jerbe/jim-docs.git" HEAD:main
+            echo "push tag"
+            git push --force origin ${{ github.event.inputs.version }}  
+          else
+            echo "nothing to commit"
+            exit 0
+          fi || exit 0
       - name: 发布已编译固件
         uses: ncipollo/release-action@main
         if: ${{ steps.organize.outputs.status }} == 'success' && !cancelled()
