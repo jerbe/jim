@@ -238,25 +238,8 @@ func sendChatMessageToFriend(ctx *gin.Context, req *SendChatMessageRequest, curr
 	}
 	JSON(ctx, rsp)
 
-	var psData = &pubsub.ChatMessage{
-		ActionID:    rsp.ActionID,
-		ReceiverID:  rsp.ReceiverID,
-		SessionType: rsp.SessionType,
-		Type:        rsp.Type,
-		SenderID:    rsp.SenderID,
-		MessageID:   rsp.MessageID,
-		CreatedAt:   rsp.CreatedAt,
-		Body: pubsub.ChatMessageBody{
-			Text:          rsp.Body.Text,
-			Src:           rsp.Body.Src,
-			Format:        rsp.Body.Format,
-			Size:          rsp.Body.Size,
-			Longitude:     rsp.Body.Longitude,
-			Latitude:      rsp.Body.Latitude,
-			Scale:         rsp.Body.Scale,
-			LocationLabel: rsp.Body.LocationLabel,
-		},
-	}
+	psData := fillChatMessageForPublish(&rsp)
+
 	err = pubsub.PublishChatMessage(ctx, psData)
 	if err != nil {
 		log.ErrorFromGinContext(ctx).Err(err).
@@ -374,26 +357,7 @@ func sendChatMessageToGroup(ctx *gin.Context, req *SendChatMessageRequest, curre
 		return
 	}
 
-	var psData = &pubsub.ChatMessage{
-		ActionID:    rsp.ActionID,
-		ReceiverID:  rsp.ReceiverID,
-		SessionType: rsp.SessionType,
-		Type:        rsp.Type,
-		SenderID:    rsp.SenderID,
-		MessageID:   rsp.MessageID,
-		CreatedAt:   rsp.CreatedAt,
-		Body: pubsub.ChatMessageBody{
-			Text:          rsp.Body.Text,
-			Src:           rsp.Body.Src,
-			Format:        rsp.Body.Format,
-			Size:          rsp.Body.Size,
-			Longitude:     rsp.Body.Longitude,
-			Latitude:      rsp.Body.Latitude,
-			Scale:         rsp.Body.Scale,
-			LocationLabel: rsp.Body.LocationLabel,
-		},
-		PublishTargets: memberStrIds,
-	}
+	psData := fillChatMessageForPublish(&rsp, memberStrIds)
 	err = pubsub.PublishChatMessage(ctx, psData)
 	if err != nil {
 		log.ErrorFromGinContext(ctx).Err(err).
@@ -458,25 +422,7 @@ func sendChatMessageToWorld(ctx *gin.Context, req *SendChatMessageRequest, curre
 	}
 	JSON(ctx, rsp)
 
-	var psData = &pubsub.ChatMessage{
-		ActionID:    rsp.ActionID,
-		ReceiverID:  rsp.ReceiverID,
-		SessionType: rsp.SessionType,
-		Type:        rsp.Type,
-		SenderID:    rsp.SenderID,
-		MessageID:   rsp.MessageID,
-		CreatedAt:   rsp.CreatedAt,
-		Body: pubsub.ChatMessageBody{
-			Text:          rsp.Body.Text,
-			Src:           rsp.Body.Src,
-			Format:        rsp.Body.Format,
-			Size:          rsp.Body.Size,
-			Longitude:     rsp.Body.Longitude,
-			Latitude:      rsp.Body.Latitude,
-			Scale:         rsp.Body.Scale,
-			LocationLabel: rsp.Body.LocationLabel,
-		},
-	}
+	psData := fillChatMessageForPublish(&rsp)
 	err = pubsub.PublishChatMessage(ctx, psData)
 	if err != nil {
 		log.ErrorFromGinContext(ctx).Err(err).
@@ -490,6 +436,37 @@ func sendChatMessageToWorld(ctx *gin.Context, req *SendChatMessageRequest, curre
 	}
 	return
 
+}
+
+// fillChatMessageForPublish 填充推送用的聊天消息
+func fillChatMessageForPublish(rsp *SendChatMessageResponse, targetIDs ...[]int64) *pubsub.ChatMessage {
+	var targets = make([]int64, 0)
+	if len(targetIDs) > 0 {
+		targets = targetIDs[0]
+	}
+
+	msg := pubsub.NewChatMessage()
+	msg.ActionID = rsp.ActionID
+	msg.ReceiverID = rsp.ReceiverID
+	msg.SessionType = rsp.SessionType
+	msg.Type = rsp.Type
+	msg.SenderID = rsp.SenderID
+	msg.MessageID = rsp.MessageID
+	msg.CreatedAt = rsp.CreatedAt
+	msg.PublishTargets = targets
+
+	msgBody := pubsub.NewChatMessageBody()
+	msgBody.Text = rsp.Body.Text
+	msgBody.Src = rsp.Body.Src
+	msgBody.Format = rsp.Body.Format
+	msgBody.Size = rsp.Body.Size
+	msgBody.Longitude = rsp.Body.Longitude
+	msgBody.Latitude = rsp.Body.Latitude
+	msgBody.Scale = rsp.Body.Scale
+	msgBody.LocationLabel = rsp.Body.LocationLabel
+
+	msg.Body = msgBody
+	return msg
 }
 
 // RollbackChatMessageHandler 回滚聊天消息处理方法
@@ -508,7 +485,7 @@ func DeleteChatMessageHandler(ctx *gin.Context) {
 
 // SubscribeChatMessageHandler 接收聊天消息
 func SubscribeChatMessageHandler(ctx context.Context, payload *pubsub.Payload) {
-	chatMsg := new(pubsub.ChatMessage)
+	chatMsg := pubsub.NewChatMessage()
 	err := payload.UnmarshalData(chatMsg)
 	if err != nil {
 		log.Error().Err(err).

@@ -2,6 +2,7 @@ package pubsub
 
 import (
 	"context"
+	"sync"
 )
 
 /**
@@ -9,6 +10,32 @@ import (
   @time : 2023/8/24 16:19
   @describe :
 */
+
+var chatMessagePool = &sync.Pool{
+	New: func() any {
+		return new(ChatMessage)
+	},
+}
+
+var chatMessageBodyPool = &sync.Pool{
+	New: func() any {
+		return new(*ChatMessageBody)
+	},
+}
+
+func NewChatMessage() *ChatMessage {
+	msg := chatMessagePool.Get().(*ChatMessage)
+	msg.ActionID = ""
+	msg.ReceiverID = 0
+	msg.SessionType = 0
+	msg.Type = 0
+	msg.SenderID = 0
+	msg.MessageID = 0
+	msg.CreatedAt = 0
+	msg.Body = nil
+	msg.PublishTargets = nil
+	return msg
+}
 
 // ChatMessage 订阅传输用的聊天消息结构
 type ChatMessage struct {
@@ -34,7 +61,7 @@ type ChatMessage struct {
 	CreatedAt int64 `json:"created_at"`
 
 	// Body 消息体;
-	Body ChatMessageBody `json:"body"`
+	Body *ChatMessageBody `json:"body"`
 
 	// PublishTargets 群成员ID列表
 	PublishTargets []int64 `json:"publish_targets,omitempty"`
@@ -67,7 +94,22 @@ type ChatMessageBody struct {
 	LocationLabel string `bson:"location_label,omitempty" json:"location_label,omitempty"`
 }
 
+func NewChatMessageBody() *ChatMessageBody {
+	body := chatMessageBodyPool.Get().(*ChatMessageBody)
+	body.Text = ""
+	body.Src = ""
+	body.Format = ""
+	body.Size = ""
+	body.Longitude = ""
+	body.Latitude = ""
+	body.Scale = 0
+	body.LocationLabel = ""
+	return body
+}
+
 // PublishChatMessage 发布聊天消息到其他服务器上
 func PublishChatMessage(ctx context.Context, data *ChatMessage) error {
-	return PublishWithPayload(ctx, ChannelChatMessage, PayloadTypeChatMessage, data)
+	err := PublishWithPayload(ctx, ChannelChatMessage, PayloadTypeChatMessage, data)
+	chatMessagePool.Put(data)
+	return err
 }

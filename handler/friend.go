@@ -658,24 +658,8 @@ func sayHelloFn(ctx *gin.Context, userID, targetID int64, now *time.Time) error 
 	}
 
 	// 进行多服务器订阅推送
-	var psData = &pubsub.ChatMessage{
-		ReceiverID:  msg.ReceiverID,
-		SessionType: msg.SessionType,
-		Type:        msg.Type,
-		SenderID:    msg.SenderID,
-		MessageID:   msg.MessageID,
-		CreatedAt:   msg.CreatedAt,
-		Body: pubsub.ChatMessageBody{
-			Text:          msg.Body.Text,
-			Src:           msg.Body.Src,
-			Format:        msg.Body.Format,
-			Size:          msg.Body.Size,
-			Longitude:     msg.Body.Longitude,
-			Latitude:      msg.Body.Latitude,
-			Scale:         msg.Body.Scale,
-			LocationLabel: msg.Body.LocationLabel,
-		},
-	}
+	psData := fillSayHelloChatMessageForPublish(msg)
+
 	err = pubsub.PublishChatMessage(ctx, psData)
 	if err != nil {
 		log.ErrorFromGinContext(ctx).Err(err).
@@ -689,6 +673,29 @@ func sayHelloFn(ctx *gin.Context, userID, targetID int64, now *time.Time) error 
 		//@ todo 需要重做推送!
 	}
 	return nil
+}
+
+func fillSayHelloChatMessageForPublish(rsp *database.ChatMessage) *pubsub.ChatMessage {
+	msg := pubsub.NewChatMessage()
+	msg.ReceiverID = rsp.ReceiverID
+	msg.SessionType = rsp.SessionType
+	msg.Type = rsp.Type
+	msg.SenderID = rsp.SenderID
+	msg.MessageID = rsp.MessageID
+	msg.CreatedAt = rsp.CreatedAt
+
+	msgBody := pubsub.NewChatMessageBody()
+	msgBody.Text = rsp.Body.Text
+	msgBody.Src = rsp.Body.Src
+	msgBody.Format = rsp.Body.Format
+	msgBody.Size = rsp.Body.Size
+	msgBody.Longitude = rsp.Body.Longitude
+	msgBody.Latitude = rsp.Body.Latitude
+	msgBody.Scale = rsp.Body.Scale
+	msgBody.LocationLabel = rsp.Body.LocationLabel
+
+	msg.Body = msgBody
+	return msg
 }
 
 // publishInvite 推送邀请通知

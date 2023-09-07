@@ -107,17 +107,20 @@ func getToken() (string, error) {
 func BenchmarkChatSendMessageUseApi(b *testing.B) {
 	//r := gin.New()
 	jsonData := `{
-    "receiver_id":"2",
+    "action_id":"随机字符串",
+    "receiver_id":2,
     "session_type":1,
-    "message_type":1,
+    "type":1,
     "body":{"text":"test"}
 }`
 
-	token, err := getToken()
-	if err != nil {
-		log.Println(err)
-		return
-	}
+	//token, err := getToken()
+	//if err != nil {
+	//	log.Println(err)
+	//	return
+	//}
+
+	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJleHAiOjE3MjU2MzQ0ODl9.WTqdIHkA8D8lfE_nJVir9Z64Cy1gZ-V11extOlvUjSI"
 
 	file, err := os.Open("./benchmark.log")
 	if err != nil && os.IsNotExist(err) {
@@ -145,7 +148,7 @@ func BenchmarkChatSendMessageUseApi(b *testing.B) {
 			//w := httptest.NewRecorder()
 			///req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:8080/api/chat/send_message", bytes.NewBufferString(jsonData))
 			b.StopTimer()
-			req, err := http.NewRequest(http.MethodPost, "http://127.0.0.1:8080/api/chat/send_message", bytes.NewBufferString(jsonData))
+			req, err := http.NewRequest(http.MethodPost, "http://192.168.31.100:8080/api/v1/chat/message/send", bytes.NewBufferString(jsonData))
 			req.Header.Add("Authorization", token)
 			req.Header.Add("Content-Type", "application/json")
 
@@ -256,17 +259,18 @@ func BenchmarkChatSendMessageParallel(b *testing.B) {
 	r := gin.New()
 	jsonData := `{
     "action_id":"随机字符串",
-    "receiver_id":"2",
+    "receiver_id":2,
     "session_type":1,
     "type":1,
     "body":{"text":"test"}
 }`
 
-	token, err := getToken()
-	if err != nil {
-		log.Println(err)
-		return
-	}
+	//token, err := getToken()
+	//if err != nil {
+	//	log.Println(err)
+	//	return
+	//}
+	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJleHAiOjE3MjU2MzQ0ODl9.WTqdIHkA8D8lfE_nJVir9Z64Cy1gZ-V11extOlvUjSI"
 
 	//file, err := os.Open("./benchmark.log")
 	//if err != nil && os.IsNotExist(err) {
@@ -291,7 +295,7 @@ func BenchmarkChatSendMessageParallel(b *testing.B) {
 
 			w := httptest.NewRecorder()
 			b.StopTimer()
-			req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:8080/api/chat/send_message", bytes.NewBufferString(jsonData))
+			req := httptest.NewRequest(http.MethodPost, "http://192.168.31.100:8080/api/chat/send_message", bytes.NewBufferString(jsonData))
 			req.Header.Add("Authorization", token)
 			req.Header.Add("Content-Type", "application/json")
 
@@ -339,11 +343,12 @@ func TestWebsocketHandler(t *testing.T) {
 }
 
 func TestBenchmarkWebsocketApi(t *testing.T) {
-	token, err := getToken()
-	if err != nil {
-		t.Fatal(err)
-	}
+	//token, err := getToken()
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
 
+	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJleHAiOjE3MjU2MzQ0ODl9.WTqdIHkA8D8lfE_nJVir9Z64Cy1gZ-V11extOlvUjSI"
 	wg := &sync.WaitGroup{}
 
 	for i := 0; i < 9999; i++ {
@@ -355,7 +360,7 @@ func TestBenchmarkWebsocketApi(t *testing.T) {
 			}()
 			header := http.Header{}
 			header.Add("Authorization", token)
-			conn, rsp, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8080/api/ws", header)
+			conn, rsp, err := websocket.DefaultDialer.Dial("ws://192.168.31.100:8080/api/ws", header)
 			if err != nil {
 				log.Println(err)
 				return
