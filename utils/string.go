@@ -1,6 +1,9 @@
 package utils
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/google/uuid"
+)
 
 /**
   @author : Jerbe - The porter from Earth
@@ -22,6 +25,11 @@ func FormatGroupRoomID(groupID int64) string {
 	return fmt.Sprintf("%08x", groupID)
 }
 
+// FormatWorldRoomID 格式化世界聊天室房间号
+func FormatWorldRoomID(worldID int64) string {
+	return fmt.Sprintf("world_%04x", worldID)
+}
+
 // StringCut 裁剪字符串
 func StringCut(data string, limit int) string {
 	d := []rune(data)
@@ -35,4 +43,9 @@ func StringCut(data string, limit int) string {
 // StringLen 返回字符串的长度,因为中文需要3个字节(byte),所以,我们使用rune来代替
 func StringLen(data string) int {
 	return len([]rune(data))
+}
+
+// UUID 全球唯一标识
+func UUID() string {
+	return uuid.New().String()
 }

@@ -115,7 +115,7 @@ Here are the planned features:
 ### Chat
 - [ ] Chat List
   - [ ] Pin chats
-  - [ ] Last message in chat list
+  - [x] Last message in chat room
 - [x]  Private Chat
   - [x] Send plain text
   - [ ] Send images

@@ -3,15 +3,6 @@ package handler
 import (
 	"bytes"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/jerbe/jim/config"
-	"github.com/jerbe/jim/database"
-	"github.com/jerbe/jim/errors"
-	"github.com/jerbe/jim/log"
-	"github.com/jerbe/jim/utils"
-	"github.com/rs/zerolog"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -19,6 +10,16 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/jerbe/jim/config"
+	"github.com/jerbe/jim/database"
+	"github.com/jerbe/jim/errors"
+	"github.com/jerbe/jim/log"
+	"github.com/jerbe/jim/utils"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/rs/zerolog"
 )
 
 /**
@@ -52,7 +53,7 @@ func CORSMiddleware() gin.HandlerFunc {
 	}
 }
 
-// RecoverMiddleware
+// RecoverMiddleware 回复中间件
 func RecoverMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		defer func() {
@@ -143,7 +144,12 @@ func RequestLogMiddleware() gin.HandlerFunc {
 			Str("host", ctx.Request.Host).
 			Str("uri", ctx.Request.URL.Path)
 		if ctx.Request.URL.RawQuery != "" {
-			l.Str("query", ctx.Request.URL.RawQuery)
+			q := ctx.Request.URL.Query()
+			if q.Has("token") {
+				q.Set("token", "****")
+			}
+			query := strings.ReplaceAll(q.Encode(), "%2A", "*")
+			l.Str("query", query)
 		}
 		l.Int("status_code", ctx.Writer.Status())
 		startTime := time.Now()
@@ -179,7 +185,7 @@ func getAndStoreRequestID(ctx *gin.Context) string {
 	if requestID := ctx.GetString(REQUEST_ID_CONTEXT_KEY); requestID != "" {
 		return requestID
 	}
-	requestID := primitive.NewObjectID().Hex()
+	requestID := utils.UUID()
 	ctx.Set(REQUEST_ID_CONTEXT_KEY, requestID)
 	return requestID
 }
@@ -191,7 +197,7 @@ func checkAuth(ctx *gin.Context) bool {
 
 	authToken := ctx.GetHeader("Authorization")
 	if authToken == "" {
-		authToken = ctx.Query("auth")
+		authToken = ctx.Query("token")
 	}
 
 	if authToken == "" {

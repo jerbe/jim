@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/jerbe/jim/errors"
 	"github.com/jerbe/jim/pubsub"
@@ -21,30 +22,43 @@ import (
   @describe :
 */
 
-/*
- {
-	"action":"send_msg",
-	"data":{}
-}
-*/
+// ChatMessage 消息体
+// @Description 消息体
+type ChatMessage struct {
+	// ID 消息ID
+	ID string `json:"id" example:"9d7a3bcd72"`
 
-// SendChatMessageRequest 聊天发送消息请求参数
-// @Description 聊天发送消息请求参数
-type SendChatMessageRequest struct {
 	// ActionID 行为ID,由前端生成
-	ActionID string `json:"action_id" example:"8d7a3bcd72"`
-
-	// ReceiverID 接收人; 可以是用户ID,也可以是群号
-	ReceiverID int64 `json:"receiver_id" binding:"required" example:"1234"`
+	ActionID string `json:"action_id,omitempty" example:"8d7a3bcd72"`
 
 	// SessionType 会话类型; 1:私聊, 2:群聊
 	SessionType int `json:"session_type" binding:"required" enums:"1,2" example:"1"`
 
-	// Type 消息类型: 1-纯文本,2-图片,3-语音,4-视频, 5-位置
+	// Type 消息类型; 1-纯文本,2-图片,3-语音,4-视频, 5-位置
 	Type int `json:"type" enums:"1,2,3,4,5" binding:"required" example:"1"`
+
+	// SenderID 发送方ID
+	SenderID int64 `json:"sender_id" example:"1234456"`
+
+	// ReceiverID 接收方ID
+	ReceiverID int64 `json:"receiver_id" example:"1"`
+
+	// MessageID 消息ID
+	MessageID int64 `json:"message_id" example:"123"`
+
+	// CreatedAt 创建
+	CreatedAt int64 `json:"created_at"example:"12345678901234"`
 
 	// Body 消息体;
 	Body ChatMessageBody `json:"body" binding:"required"`
+}
+
+func (cm *ChatMessage) MarshalBinary() ([]byte, error) {
+	return json.Marshal(cm)
+}
+
+func (cm *ChatMessage) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, cm)
 }
 
 // ChatMessageBody 消息主体
@@ -75,19 +89,23 @@ type ChatMessageBody struct {
 	LocationLabel string `json:"location_label,omitempty" example:"成人影视学院"`
 }
 
-// SendChatMessageResponse 发送聊天返回数据
-// @Description 发送聊天返回数据
-type SendChatMessageResponse struct {
-	// 发送人ID
-	SenderID int64 `json:"sender_id" binding:"required" example:"1234456"`
+// SendChatMessageRequest 聊天发送消息请求参数
+// @Description 聊天发送消息请求参数
+type SendChatMessageRequest struct {
+	// ActionID 行为ID,由前端生成
+	ActionID string `json:"action_id" example:"8d7a3bcd72"`
 
-	// MessageID 消息ID
-	MessageID int64 `json:"message_id" binding:"required" example:"123"`
+	// SessionType 会话类型; 1:私聊, 2:群聊
+	SessionType int `json:"session_type" binding:"required" enums:"1,2" example:"1"`
 
-	// CreatedAt 创建
-	CreatedAt int64 `json:"created_at" binding:"required" example:"12345678901234"`
+	// Type 消息类型; 1-纯文本,2-图片,3-语音,4-视频, 5-位置
+	Type int `json:"type" enums:"1,2,3,4,5" binding:"required" example:"1"`
 
-	SendChatMessageRequest
+	// TargetID 目标ID; 可以是用户ID,也可以是群ID,也可以是世界频道ID
+	TargetID int64 `json:"target_id" binding:"required" example:"1234"`
+
+	// Body 消息体;
+	Body ChatMessageBody `json:"body" binding:"required"`
 }
 
 // SendChatMessageHandler
@@ -97,7 +115,7 @@ type SendChatMessageResponse struct {
 // @Produce      json
 // @Param        jsonRaw    body      SendChatMessageRequest  true  "请求JSON数据体"
 // @Security 	 APIKeyHeader
-// @Success      200  {object}  Response{data=SendChatMessageResponse}
+// @Success      200  {object}  Response{data=[]ChatMessage}
 // @Failure      400  {object}  Response
 // @Failure      404  {object}  Response
 // @Failure      500  {object}  Response
@@ -117,7 +135,7 @@ func SendChatMessageHandler(ctx *gin.Context) {
 		return
 	}
 
-	if req.ReceiverID <= 0 {
+	if req.TargetID <= 0 {
 		JSONError(ctx, StatusError, MessageInvalidReceiverID)
 		return
 	}
@@ -142,16 +160,110 @@ func SendChatMessageHandler(ctx *gin.Context) {
 	}
 
 	if req.SessionType == database.ChatMessageSessionTypeWorld {
-		sendChatMessageToWorld(ctx, req, currentUser)
+		sendChatMessage(ctx, req, nil)
 		return
 	}
 
 }
 
+// sendChatMessage 发送聊天消息
+func sendChatMessage(ctx *gin.Context, req *SendChatMessageRequest, pubSubMsgFn func(*pubsub.ChatMessage) error) {
+	currentUser := LoginUserFromContext(ctx)
+	targetID := req.TargetID
+
+	roomID := ""
+	switch req.SessionType {
+	case database.ChatMessageSessionTypePrivate:
+		// 私聊状态的房间号是按 用户ID排序分组
+		roomID = utils.FormatPrivateRoomID(currentUser.ID, targetID)
+	case database.ChatMessageSessionTypeGroup:
+		roomID = utils.FormatGroupRoomID(targetID)
+	case database.ChatMessageSessionTypeWorld:
+		roomID = utils.FormatWorldRoomID(targetID)
+	}
+
+	now := time.Now()
+	// 插入消息数据库
+	msg := &database.ChatMessage{
+		RoomID:      roomID,
+		Type:        req.Type,
+		SessionType: req.SessionType,
+		SenderID:    currentUser.ID,
+		ReceiverID:  targetID,
+		SendStatus:  1,
+		ReadStatus:  0,
+		Status:      1,
+		CreatedAt:   now.UnixMilli(),
+		UpdatedAt:   now.UnixMilli(),
+		Body: database.ChatMessageBody{
+			Text:          req.Body.Text,
+			Src:           req.Body.Src,
+			Format:        req.Body.Format,
+			Size:          req.Body.Size,
+			Longitude:     req.Body.Longitude,
+			Latitude:      req.Body.Latitude,
+			Scale:         req.Body.Scale,
+			LocationLabel: req.Body.LocationLabel,
+		},
+	}
+
+	err := database.AddChatMessage(msg)
+	if err != nil {
+		log.ErrorFromGinContext(ctx).Err(err).
+			Str("err_format", fmt.Sprintf("%+v", err)).
+			Int64("user_id", currentUser.ID).
+			Int64("receiver_id", msg.ReceiverID).
+			Int("session_type", msg.SessionType).
+			Msg("添加聊天消息失败")
+		JSONError(ctx, StatusError, MessageInternalServerError)
+		return
+	}
+
+	rsp := &ChatMessage{
+		ID:          msg.ID.Hex(),
+		ActionID:    req.ActionID,
+		SessionType: msg.SessionType,
+		Type:        msg.Type,
+		SenderID:    currentUser.ID,
+		ReceiverID:  msg.ReceiverID,
+		MessageID:   msg.MessageID,
+		CreatedAt:   msg.CreatedAt,
+	}
+	JSON(ctx, rsp)
+
+	psData := fillChatMessageForPublish(rsp)
+
+	if pubSubMsgFn != nil {
+		if err = pubSubMsgFn(psData); err != nil {
+			log.ErrorFromGinContext(ctx).Err(err).
+				Str("err_format", fmt.Sprintf("%+v", err)).
+				Int64("user_id", currentUser.ID).
+				Int64("receiver_id", msg.ReceiverID).
+				Int("session_type", msg.SessionType).
+				Msg("执行推送消息操作方法失败")
+			return
+		}
+	}
+
+	err = pubsub.PublishChatMessage(ctx, psData)
+	if err != nil {
+		log.ErrorFromGinContext(ctx).Err(err).
+			Str("err_format", fmt.Sprintf("%+v", err)).
+			Int64("user_id", currentUser.ID).
+			Int64("receiver_id", msg.ReceiverID).
+			Int("session_type", msg.SessionType).
+			Msg("推送聊天消息到管道失败")
+
+		//@ todo 需要重做推送
+	}
+
+	return
+}
+
 // sendChatMessageToFriend 向好友发送聊天消息
 func sendChatMessageToFriend(ctx *gin.Context, req *SendChatMessageRequest, currentUser *database.User) {
-	targetID := req.ReceiverID
-	if currentUser.ID == req.ReceiverID {
+	targetID := req.TargetID
+	if currentUser.ID == req.TargetID {
 		JSONError(ctx, StatusError, MessageChatYourself)
 		return
 	}
@@ -190,75 +302,15 @@ func sendChatMessageToFriend(ctx *gin.Context, req *SendChatMessageRequest, curr
 		return
 	}
 
-	// 私聊状态的房间号是按 用户ID排序分组
-	roomID := utils.FormatPrivateRoomID(currentUser.ID, targetID)
-
-	now := time.Now()
-	// 插入消息数据库
-	msg := &database.ChatMessage{
-		RoomID:      roomID,
-		Type:        req.Type,
-		SessionType: database.ChatMessageSessionTypePrivate,
-		SenderID:    currentUser.ID,
-		ReceiverID:  targetID,
-		SendStatus:  1,
-		ReadStatus:  0,
-		Status:      1,
-		CreatedAt:   now.UnixMilli(),
-		UpdatedAt:   now.UnixMilli(),
-		Body: database.ChatMessageBody{
-			Text:          req.Body.Text,
-			Src:           req.Body.Src,
-			Format:        req.Body.Format,
-			Size:          req.Body.Size,
-			Longitude:     req.Body.Longitude,
-			Latitude:      req.Body.Latitude,
-			Scale:         req.Body.Scale,
-			LocationLabel: req.Body.LocationLabel,
-		},
-	}
-
-	err = database.AddChatMessage(msg)
-	if err != nil {
-		log.ErrorFromGinContext(ctx).Err(err).
-			Str("err_format", fmt.Sprintf("%+v", err)).
-			Int64("user_id", currentUser.ID).
-			Int64("receiver_id", msg.ReceiverID).
-			Int("session_type", msg.SessionType).
-			Msg("添加聊天消息失败")
-		JSONError(ctx, StatusError, MessageInternalServerError)
-		return
-	}
-
-	rsp := SendChatMessageResponse{
-		SenderID:               currentUser.ID,
-		MessageID:              msg.MessageID,
-		CreatedAt:              msg.CreatedAt,
-		SendChatMessageRequest: *req,
-	}
-	JSON(ctx, rsp)
-
-	psData := fillChatMessageForPublish(&rsp)
-
-	err = pubsub.PublishChatMessage(ctx, psData)
-	if err != nil {
-		log.ErrorFromGinContext(ctx).Err(err).
-			Str("err_format", fmt.Sprintf("%+v", err)).
-			Int64("user_id", currentUser.ID).
-			Int64("receiver_id", msg.ReceiverID).
-			Int("session_type", msg.SessionType).
-			Msg("推送聊天消息到管道失败")
-
-		//@ todo 需要重做推送
-	}
-
+	// 发送聊天消息
+	sendChatMessage(ctx, req, nil)
 	return
 }
 
 // sendChatMessageToGroup 发送群聊信息
 func sendChatMessageToGroup(ctx *gin.Context, req *SendChatMessageRequest, currentUser *database.User) {
 
-	targetID := req.ReceiverID
+	targetID := req.TargetID
 
 	// 获取群消息
 	group, err := database.GetGroup(targetID)
@@ -297,154 +349,21 @@ func sendChatMessageToGroup(ctx *gin.Context, req *SendChatMessageRequest, curre
 		return
 	}
 
-	// 私聊状态的房间号是按 用户ID排序分组
-	roomID := utils.FormatGroupRoomID(targetID)
-
-	now := time.Now()
-	// 插入消息数据库
-	msg := &database.ChatMessage{
-		RoomID:      roomID,
-		Type:        req.Type,
-		SessionType: database.ChatMessageSessionTypeGroup,
-		SenderID:    currentUser.ID,
-		ReceiverID:  targetID,
-		SendStatus:  1,
-		ReadStatus:  0,
-		Status:      1,
-		CreatedAt:   now.UnixMilli(),
-		UpdatedAt:   now.UnixMilli(),
-		Body: database.ChatMessageBody{
-			Text:          req.Body.Text,
-			Src:           req.Body.Src,
-			Format:        req.Body.Format,
-			Size:          req.Body.Size,
-			Longitude:     req.Body.Longitude,
-			Latitude:      req.Body.Latitude,
-			Scale:         req.Body.Scale,
-			LocationLabel: req.Body.LocationLabel,
-		},
-	}
-
-	err = database.AddChatMessage(msg)
-	if err != nil {
-		log.ErrorFromGinContext(ctx).Err(err).
-			Str("err_format", fmt.Sprintf("%+v", err)).
-			Int64("user_id", currentUser.ID).
-			Int64("receiver_id", msg.ReceiverID).
-			Int("session_type", msg.SessionType).
-			Msg("添加聊天消息失败")
-		JSONError(ctx, StatusError, MessageInternalServerError)
-		return
-	}
-
-	rsp := SendChatMessageResponse{
-		SenderID:               currentUser.ID,
-		MessageID:              msg.MessageID,
-		CreatedAt:              msg.CreatedAt,
-		SendChatMessageRequest: *req,
-	}
-	JSON(ctx, rsp)
-
-	// 先查出所有群成员ID,这样订阅到的实例无需再次获取群成员信息
-	memberStrIds, err := database.GetGroupMemberIDs(targetID)
-	if err != nil && !errors.IsNoRecord(err) {
-		log.ErrorFromGinContext(ctx).Err(err).
-			Str("err_format", fmt.Sprintf("%+v", err)).
-			Int64("user_id", currentUser.ID).
-			Int64("receiver_id", msg.ReceiverID).
-			Int("session_type", msg.SessionType).
-			Msg("获取群成员ID列表失败")
-		return
-	}
-
-	psData := fillChatMessageForPublish(&rsp, memberStrIds)
-	err = pubsub.PublishChatMessage(ctx, psData)
-	if err != nil {
-		log.ErrorFromGinContext(ctx).Err(err).
-			Str("err_format", fmt.Sprintf("%+v", err)).
-			Int64("user_id", currentUser.ID).
-			Int64("receiver_id", msg.ReceiverID).
-			Int("session_type", msg.SessionType).
-			Msg("推送聊天消息到管道失败")
-
-		//@ todo 需要重做推送
-	}
-	return
-
-}
-
-// sendChatMessageToWorld 发送世界信息
-func sendChatMessageToWorld(ctx *gin.Context, req *SendChatMessageRequest, currentUser *database.User) {
-	targetID := req.ReceiverID
-
-	now := time.Now()
-	// 插入消息数据库
-	msg := &database.ChatMessage{
-		RoomID:      fmt.Sprintf("world_%04x", targetID),
-		Type:        req.Type,
-		SessionType: database.ChatMessageSessionTypeWorld,
-		SenderID:    currentUser.ID,
-		ReceiverID:  targetID,
-		SendStatus:  1,
-		ReadStatus:  0,
-		Status:      1,
-		CreatedAt:   now.UnixMilli(),
-		UpdatedAt:   now.UnixMilli(),
-		Body: database.ChatMessageBody{
-			Text:          req.Body.Text,
-			Src:           req.Body.Src,
-			Format:        req.Body.Format,
-			Size:          req.Body.Size,
-			Longitude:     req.Body.Longitude,
-			Latitude:      req.Body.Latitude,
-			Scale:         req.Body.Scale,
-			LocationLabel: req.Body.LocationLabel,
-		},
-	}
-
-	err := database.AddChatMessage(msg)
-	if err != nil {
-		log.ErrorFromGinContext(ctx).Err(err).
-			Str("err_format", fmt.Sprintf("%+v", err)).
-			Int64("user_id", currentUser.ID).
-			Int64("receiver_id", msg.ReceiverID).
-			Int("session_type", msg.SessionType).
-			Msg("添加聊天消息失败")
-		JSONError(ctx, StatusError, MessageInternalServerError)
-		return
-	}
-
-	rsp := SendChatMessageResponse{
-		SenderID:               currentUser.ID,
-		MessageID:              msg.MessageID,
-		CreatedAt:              msg.CreatedAt,
-		SendChatMessageRequest: *req,
-	}
-	JSON(ctx, rsp)
-
-	psData := fillChatMessageForPublish(&rsp)
-	err = pubsub.PublishChatMessage(ctx, psData)
-	if err != nil {
-		log.ErrorFromGinContext(ctx).Err(err).
-			Str("err_format", fmt.Sprintf("%+v", err)).
-			Int64("user_id", currentUser.ID).
-			Int64("receiver_id", msg.ReceiverID).
-			Int("session_type", msg.SessionType).
-			Msg("推送聊天消息到管道失败")
-
-		//@ todo 需要重做推送
-	}
+	sendChatMessage(ctx, req, func(message *pubsub.ChatMessage) error {
+		// 先查出所有群成员ID,这样订阅到的实例无需再次获取群成员信息
+		memberIDs, err := database.GetGroupMemberIDs(targetID)
+		if err != nil && !errors.IsNoRecord(err) {
+			return errors.Wrap(err)
+		}
+		message.PublishTargets = memberIDs
+		return nil
+	})
 	return
 
 }
 
 // fillChatMessageForPublish 填充推送用的聊天消息
-func fillChatMessageForPublish(rsp *SendChatMessageResponse, targetIDs ...[]int64) *pubsub.ChatMessage {
-	var targets = make([]int64, 0)
-	if len(targetIDs) > 0 {
-		targets = targetIDs[0]
-	}
-
+func fillChatMessageForPublish(rsp *ChatMessage) *pubsub.ChatMessage {
 	msg := pubsub.NewChatMessage()
 	msg.ActionID = rsp.ActionID
 	msg.ReceiverID = rsp.ReceiverID
@@ -453,7 +372,6 @@ func fillChatMessageForPublish(rsp *SendChatMessageResponse, targetIDs ...[]int6
 	msg.SenderID = rsp.SenderID
 	msg.MessageID = rsp.MessageID
 	msg.CreatedAt = rsp.CreatedAt
-	msg.PublishTargets = targets
 
 	msgBody := pubsub.NewChatMessageBody()
 	msgBody.Text = rsp.Body.Text
@@ -479,6 +397,98 @@ func DeleteChatMessageHandler(ctx *gin.Context) {
 
 }
 
+// GetLastChatMessagesRequest
+// @Description 获取最后聊天消息列表请求参数
+type GetLastChatMessagesRequest struct {
+	// TargetID 目标ID; 朋友ID/群ID/世界频道ID
+	TargetID int64 `form:"target_id" json:"target_id"`
+
+	// SessionType 会话类型; 1-私人会话;2-群聊会话;99-世界频道会话
+	SessionType int `form:"session_type" json:"session_type"`
+}
+
+// GetLastChatMessagesHandler
+// @Summary      获取最近的聊天消息
+// @Tags         聊天
+// @Accept       json
+// @Produce      json
+// @Param        target_id    query      int  true  "目标ID; 朋友ID/群ID/世界频道ID"
+// @Param        session_type    query      int  true  "会话类型; 1-私人会话;2-群聊会话;99-世界频道会话"
+// @Security 	 APIKeyQuery
+// @Success      200  {object}  Response{data=[]ChatMessage}
+// @Failure      400  {object}  Response
+// @Failure      404  {object}  Response
+// @Failure      500  {object}  Response
+// @Router       /v1/chat/message/last [get]
+func GetLastChatMessagesHandler(ctx *gin.Context) {
+	var req = new(GetLastChatMessagesRequest)
+	err := ctx.BindQuery(req)
+	if err != nil {
+		JSONError(ctx, StatusError, err.Error())
+		return
+	}
+
+	if req.TargetID <= 0 {
+		JSONError(ctx, StatusError, MessageInvalidTargetID)
+		return
+	}
+
+	if !utils.In(req.SessionType, database.ChatMessageSessionTypePrivate, database.ChatMessageSessionTypePrivate, database.ChatMessageSessionTypePrivate) {
+		JSONError(ctx, StatusError, MessageInvalidSessionType)
+		return
+	}
+
+	currentUser := LoginUserFromContext(ctx)
+	roomID := ""
+
+	switch req.SessionType {
+	case database.ChatMessageSessionTypePrivate:
+		roomID = utils.FormatPrivateRoomID(currentUser.ID, req.TargetID)
+	case database.ChatMessageSessionTypeGroup:
+		roomID = utils.FormatGroupRoomID(req.TargetID)
+	case database.ChatMessageSessionTypeWorld:
+		roomID = utils.FormatWorldRoomID(req.TargetID)
+	}
+
+	list, err := database.GetLastChatMessageList(roomID, req.SessionType)
+	if err != nil {
+		if errors.IsNoRecord(err) {
+			JSONError(ctx, StatusError, MessageNotFound)
+			return
+		}
+		log.ErrorFromGinContext(ctx).Err(err).Str("err_format", fmt.Sprintf("%+v", err)).Str("room_id", roomID).Msg("获取最近消息列表失败")
+		JSONError(ctx, StatusError, MessageInternalServerError)
+		return
+	}
+
+	rsps := make([]*ChatMessage, len(list))
+	for i := 0; i < len(list); i++ {
+		item := list[i]
+		msg := &ChatMessage{
+			ID:          item.ID.Hex(),
+			SessionType: item.SessionType,
+			Type:        item.Type,
+			SenderID:    item.SenderID,
+			ReceiverID:  item.ReceiverID,
+			MessageID:   item.MessageID,
+			CreatedAt:   item.CreatedAt,
+			Body: ChatMessageBody{
+				Text:          item.Body.Text,
+				Src:           item.Body.Src,
+				Format:        item.Body.Format,
+				Size:          item.Body.Size,
+				Longitude:     item.Body.Longitude,
+				Latitude:      item.Body.Latitude,
+				Scale:         item.Body.Scale,
+				LocationLabel: item.Body.LocationLabel,
+			},
+		}
+		rsps[i] = msg
+	}
+	JSON(ctx, rsps)
+
+}
+
 // ========================================================================================
 // ============================ SUBSCRIBE HANDLER =========================================
 // ========================================================================================
@@ -491,7 +501,7 @@ func SubscribeChatMessageHandler(ctx context.Context, payload *pubsub.Payload) {
 		log.Error().Err(err).
 			Str("channel", payload.Channel).
 			Str("payload.type", payload.Type).
-			Msg("payload.data 不是 handler.SendChatMessageResponse 格式")
+			Msg("payload.data 不是 handler.ChatMessage 格式")
 		return
 	}
 
@@ -515,7 +525,7 @@ func SubscribeChatMessageHandler(ctx context.Context, payload *pubsub.Payload) {
 				log.Error().Err(err).
 					Str("channel", payload.Channel).
 					Str("payload.type", payload.Type).
-					Msg("payload.data 不是 handler.SendChatMessageResponse 格式")
+					Msg("payload.data 不是 handler.ChatMessage 格式")
 				return
 			}
 		}

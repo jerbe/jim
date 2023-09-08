@@ -15,6 +15,8 @@ var (
 
 	MessageInvalidParams = "参数无效"
 
+	MessageNotFound = "找不到记录"
+
 	MessageInvalidGroupID = "'group_id'无效"
 
 	MessageInvalidUserID = "'user_id'无效"
@@ -33,11 +35,17 @@ var (
 
 	MessageInvalidType = "'type'无效"
 
+	MessageInvalidTargetID = "'target_id'无效"
+
+	MessageInvalidLastMessageID = "'last_message_id'无效"
+
+	MessageInvalidLimit = "'limit'无效"
+
 	MessageChatYourself = "不可与自己聊天"
 
 	MessageNotFriends = "您与对方不是好友关系"
 
-	MessageAlreadyfriends = "你们已经是好友关系"
+	MessageAlreadyFriends = "你们已经是好友关系"
 
 	MessageBlockYou = "对方已将您拉黑"
 

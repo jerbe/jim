@@ -49,19 +49,13 @@ type User struct {
 // @Description 查找好友请求参数
 type FindFriendRequest struct {
 	// UserID 用户ID
-	UserID *int64 `json:"user_id"  example:"1"`
+	UserID *int64 `form:"user_id" json:"user_id"  example:"1"`
 
 	// Nickname 昵称
-	Nickname *string `json:"nickname" example:"昵称"`
+	Nickname *string `form:"nickname" json:"nickname" example:"昵称"`
 
 	// StartID 开始搜索ID,下次搜索用上返回的最大ID
-	StartID *int64 `json:"start_id" example:"0"`
-}
-
-// FindFriendResponse 查找好友返回参数
-// @Description 查找好友返回参数
-type FindFriendResponse struct {
-	Users []*User `json:"users" `
+	StartID *int64 `form:"start_id" json:"start_id" example:"0"`
 }
 
 // FindFriendHandler
@@ -69,16 +63,18 @@ type FindFriendResponse struct {
 // @Tags         朋友
 // @Accept       json
 // @Produce      json
-// @Param        jsonRaw    body      FindFriendRequest  true  "请求JSON数据体"
-// @Security 	 APIKeyHeader
-// @Success      200  {object}  Response{data=FindFriendResponse}
+// @Param        user_id    query      int  false  "用户ID; 'user_id'跟'nickname'必选一个"
+// @Param        nickname    query      int  false  "用户昵称; 'user_id'跟'nickname'必选一个"
+// @Param        start_id    query      int  false  "用于搜索下一批用户的起始ID;是上次返回结果中最大的用户ID"
+// @Security 	 APIKeyQuery
+// @Success      200  {object}  Response{data=[]User}
 // @Failure      400  {object}  Response
 // @Failure      404  {object}  Response
 // @Failure      500  {object}  Response
-// @Router       /v1/friend/find [post]
+// @Router       /v1/friend/find [get]
 func FindFriendHandler(ctx *gin.Context) {
 	req := new(FindFriendRequest)
-	err := ctx.BindJSON(req)
+	err := ctx.BindQuery(req)
 	if err != nil {
 		JSONError(ctx, StatusError, err.Error())
 		return
@@ -138,8 +134,7 @@ func FindFriendHandler(ctx *gin.Context) {
 			OnlineStatus: users[i].OnlineStatus,
 		}
 	}
-	rsp := FindFriendResponse{Users: rspUsers}
-	JSON(ctx, rsp)
+	JSON(ctx, rspUsers)
 }
 
 // AddFriendInviteRequest 邀请用户成为好友操作请求参数
@@ -216,7 +211,7 @@ func AddFriendInviteHandler(ctx *gin.Context) {
 	if relation != nil {
 		// 1.1.1 存在记录并且已是好友关系,无需再次申请
 		if relation != nil && relation.Status == 3 {
-			JSONError(ctx, StatusError, MessageAlreadyfriends)
+			JSONError(ctx, StatusError, MessageAlreadyFriends)
 			return
 		}
 

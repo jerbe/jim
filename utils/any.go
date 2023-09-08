@@ -11,33 +11,34 @@ import (
   @describe :
 */
 
+// checkIsNil 检测是否是真nil值
+func checkIsNil(v any) bool {
+	if v != nil {
+		// 如果目标不是xx类型,则返回
+		typ := reflect.TypeOf(v)
+		if typ.Kind() != reflect.Pointer {
+			return false
+		}
+
+		value := reflect.ValueOf(v)
+		if !value.IsNil() {
+			return false
+		}
+	}
+	return true
+}
+
 // In 判断obj是否与target或者targets内的某个元素相等
 // 如果 obj 等于 target 或者等于 targets 其中一项,则返回true
 // 如果没匹配到其中一项,则返回false
 func In(obj any, target any, targets ...any) bool {
 	if obj == nil {
-		checkNil := func(v any) bool {
-			if v != nil {
-				// 如果目标不是xx类型,则返回
-				typ := reflect.TypeOf(v)
-				if typ.Kind() != reflect.Pointer {
-					return false
-				}
-
-				value := reflect.ValueOf(v)
-				if !value.IsNil() {
-					return false
-				}
-			}
-			return true
-		}
-
-		if checkNil(target) {
+		if checkIsNil(target) {
 			return true
 		}
 
 		for i := 0; i < len(targets); i++ {
-			if checkNil(targets[i]) {
+			if checkIsNil(targets[i]) {
 				return true
 			}
 		}
@@ -47,6 +48,7 @@ func In(obj any, target any, targets ...any) bool {
 	if obj == target {
 		return true
 	}
+
 	for i := 0; i < len(targets); i++ {
 		if obj == targets[i] {
 			return true

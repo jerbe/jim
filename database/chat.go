@@ -127,10 +127,10 @@ type ChatMessage struct {
 	SessionType int `bson:"session_type" json:"session_type"`
 
 	// 发送人ID
-	SenderID int64 `bson:"sender_id"`
+	SenderID int64 `bson:"sender_id" json:"sender_id"`
 
 	// 接收人ID
-	ReceiverID int64 `bson:"receiver_id"`
+	ReceiverID int64 `bson:"receiver_id" json:"receiver_id"`
 
 	// 消息发送状态,1-已发送,2-未抵达,3-已抵达
 	SendStatus int `bson:"send_status" json:"send_status"`
@@ -278,10 +278,10 @@ func AddChatMessage(msg *ChatMessage) error {
 	err = jcache.Push(GlobCtx, cacheKey, msg)
 	if err != nil && err.Error() == "WRONGTYPE Operation against a key holding the wrong kind of value" {
 		jcache.Del(GlobCtx, cacheKey)
-		err = jcache.Push(GlobCtx, cacheKey, msg)
-		if err != nil {
-			log.Warn().Err(err).Msg("缓存插入聊天消息失败")
-		}
+	}
+
+	if err == nil {
+		jcache.Expire(GlobCtx, cacheKey, jcache.RandomExpirationDuration())
 	}
 
 	return nil
@@ -326,12 +326,6 @@ func AddChatMessageTx(msg *ChatMessage) error {
 				return nil, errors.Wrap(err)
 			}
 
-			// 将聊天数据推送到缓存定长队列中去
-			err = jcache.Push(GlobCtx, cacheKeyFormatLastMessageList(msg.RoomID, msg.SessionType), msg)
-			if err != nil {
-				log.Error().Err(err).Msgf("推送消息到缓存列表失败:\n %+v", err)
-			}
-
 			// 更新聊天室的最后一条消息
 			_, err = db.Collection(CollectionRoom).
 				UpdateOne(ctxb, bson.M{
@@ -344,6 +338,18 @@ func AddChatMessageTx(msg *ChatMessage) error {
 			if err != nil {
 				return nil, errors.Wrap(err)
 			}
+
+			// 将聊天数据推送到缓存定长队列中去
+			cacheKey := cacheKeyFormatLastMessageList(msg.RoomID, msg.SessionType)
+			err = jcache.Push(GlobCtx, cacheKey, msg)
+			if err != nil {
+				jcache.Del(GlobCtx, cacheKey)
+				log.Error().Err(err).Msgf("推送消息到缓存列表失败:\n %+v", err)
+			}
+			if err == nil {
+				jcache.Expire(GlobCtx, cacheKey, jcache.RandomExpirationDuration())
+			}
+
 			return nil, nil
 		}, options.Transaction().SetWriteConcern(writeconcern.Majority()).SetReadConcern(readconcern.Snapshot()))
 		if err != nil {
@@ -416,38 +422,40 @@ func NewChatMessageListOptions() *GetChatMessageListOptions {
 	}
 }
 
+type GetChatMessageListFilter struct {
+	RoomID        string `bson:"room_id"`
+	SessionType   int    `bson:"session_type"`
+	Sort          any    `bson:"sort"`
+	LastMessageID *int64 `bson:"last_message_id"`
+	Limit         *int   `bson:"limit"`
+}
+
 // GetChatMessageList 获取消息列表
-func GetChatMessageList(roomID string, sessionType int, opts ...*GetChatMessageListOptions) ([]*ChatMessage, error) {
-	opt := NewChatMessageListOptions()
+func GetChatMessageList(filter *GetChatMessageListFilter, opts ...*GetOptions) ([]*ChatMessage, error) {
+	if filter.Sort == nil {
+		filter.Sort = bson.M{"message_id": -1}
+	}
 
-	for _, o := range opts {
-		if opt.Sort == nil && o.Sort != nil {
-			opt.Sort = o.Sort
-		}
-		if o.LastMessageID > opt.LastMessageID {
-			opt.LastMessageID = o.LastMessageID
-		}
-		if o.Limit > opt.Limit {
-			opt.Limit = o.Limit
+	if filter.LastMessageID == nil {
+		filter.LastMessageID = new(int64)
+	}
 
-			if opt.Limit > defaultMaxLimit {
-				opt.Limit = defaultMaxLimit
-			}
-		}
+	if filter.Limit == nil {
+		filter.Limit = new(int)
 	}
 
 	rs, err := GlobDB.Mongo.Database(DatabaseMongodbIM).
 		Collection(CollectionMessage).
 		Find(GlobCtx, bson.M{
-			"room_id":      roomID,
-			"session_type": sessionType,
+			"room_id":      filter.RoomID,
+			"session_type": filter.SessionType,
 			"message_id": bson.M{
-				"$gte": opt.LastMessageID,
-				"$lt":  opt.LastMessageID + opt.Limit,
+				"$gte": *filter.LastMessageID,
+				"$lt":  (*filter.LastMessageID) + int64(*filter.Limit),
 			},
-		}, options.Find().SetSort(opt.Sort))
+		}, options.Find().SetSort(filter.Sort))
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
+		if errors.IsNoRecord(err) {
 			return nil, errors.Wrap(err)
 		}
 		return nil, errors.Wrap(err)
@@ -469,6 +477,7 @@ func GetChatMessageList(roomID string, sessionType int, opts ...*GetChatMessageL
 func GetLastChatMessageList(roomID string, sessionType int, opts ...*GetOptions) ([]*ChatMessage, error) {
 	opt := MergeGetOptions(opts)
 	cacheKey := cacheKeyFormatLastMessageList(roomID, sessionType)
+
 	// 如果有使用缓存,则从缓存中获取
 	if opt.UseCache() {
 		exists, _ := jcache.Exists(GlobCtx, cacheKey)
@@ -491,7 +500,7 @@ func GetLastChatMessageList(roomID string, sessionType int, opts ...*GetOptions)
 		Find(GlobCtx, bson.M{
 			"room_id":      roomID,
 			"session_type": sessionType,
-		}, options.Find().SetSort(bson.M{"created_at": -1}).SetLimit(defaultLastLimit))
+		}, options.Find().SetSort(bson.M{"message_id": -1}).SetLimit(defaultLastLimit))
 
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
@@ -527,6 +536,9 @@ func GetLastChatMessageList(roomID string, sessionType int, opts ...*GetOptions)
 		if err != nil {
 			log.Warn().Err(err).Msg("缓存插入聊天消息失败")
 		}
+	}
+	if err == nil {
+		jcache.Expire(GlobCtx, cacheKey, jcache.RandomExpirationDuration())
 	}
 
 	// 设置缓存

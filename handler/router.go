@@ -30,6 +30,10 @@ import (
 // @in header
 // @name Authorization
 
+// @securityDefinitions.apikey  APIKeyQuery
+// @in query
+// @name token
+
 // @externalDocs.description  OpenAPI
 // @externalDocs.url          https://swagger.io/resources/open-api/
 
@@ -61,12 +65,13 @@ func Init() *gin.Engine {
 		chat.POST("/message/send", SendChatMessageHandler)
 		chat.POST("/message/rollback_", RollbackChatMessageHandler)
 		chat.POST("/message/delete", DeleteChatMessageHandler)
+		chat.GET("/message/last", GetLastChatMessagesHandler)
 	}
 
 	{
 		// 聊天
 		friend := apiGroup.Group("/friend")
-		friend.POST("/find", FindFriendHandler)
+		friend.GET("/find", FindFriendHandler)
 		friend.POST("/update", UpdateFriendHandle)
 
 		friend.POST("/invite/add", AddFriendInviteHandler)
