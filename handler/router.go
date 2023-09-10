@@ -37,9 +37,8 @@ import (
 // @externalDocs.description  OpenAPI
 // @externalDocs.url          https://swagger.io/resources/open-api/
 
-var rootRouter *gin.Engine
-
-func Init() *gin.Engine {
+func InitRouter() *gin.Engine {
+	var rootRouter *gin.Engine
 	rootRouter = gin.New()
 	rootRouter.Use(RecoverMiddleware(), CORSMiddleware())
 	{
@@ -47,6 +46,8 @@ func Init() *gin.Engine {
 		authGroup.POST("/login", AuthLoginHandler)
 		authGroup.POST("/register", AuthRegisterHandler)
 		authGroup.POST("/logout", AuthLoginHandler)
+
+		authGroup.POST("/captcha", GetCaptchaHandler)
 	}
 
 	// WebSocket连接
@@ -91,9 +92,12 @@ func Init() *gin.Engine {
 		group.POST("/member/remove", RemoveGroupMemberHandler)
 	}
 
+	return rootRouter
+}
+
+// InitSubscribe 初始化订阅
+func InitSubscribe() {
 	var subscriber = pubsub.NewSubscriber()
 	subscriber.Subscribe(pubsub.ChannelChatMessage, pubsub.PayloadTypeChatMessage, SubscribeChatMessageHandler)
 	subscriber.Subscribe(pubsub.ChannelNotify, pubsub.PayloadTypeFriendInvite, SubscribeFriendInviteHandler)
-
-	return rootRouter
 }

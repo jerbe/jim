@@ -16,8 +16,14 @@ import (
 */
 
 func main() {
-	// 初始化Http服务
-	httpRouter := handler.Init()
+	// 初始化验证码服务
+	handler.InitCaptcha()
+
+	// 初始化订阅服务
+	handler.InitSubscribe()
+
+	// 初始化Http路由器
+	httpRouter := handler.InitRouter()
 	if err := httpRouter.Run(":8080"); err != nil {
 		log.Fatal().Err(err).Msg("初始http服务失败")
 	}

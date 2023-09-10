@@ -106,25 +106,20 @@ jobs:
           echo "当前路径$(pwd), localPath:${localPath}"
           echo "cp -r ${localPath}/docs ./jim-docs/"
           cp -r ${localPath}/docs ./jim-docs/
-          
           cd jim-docs
           
-          echo "列出文件"
-          ls
-          git status --porcelain
-          
           if git status --porcelain | grep .; then
-            echo "添加更改文件"
+            echo "存在需要变更的文件,即将进行推送"
+            echo "1) 添加更改文件"
             git add .
-            echo "添加标签"
-            git tag ${{ github.event.inputs.version }}
-            echo "提交更改"
-            git commit -am "${{ github.event.inputs.version }}"
-            echo "推送代码"
-            git push "https://${{ secrets.ACCESS_TOKEN }}@github.com/jerbe/jim-docs.git" HEAD:main
-            echo "推送标签(tag)"
-            git push --force origin ${{ github.event.inputs.version }}  
           
+            echo "2) 提交更改"
+            git commit -am "${{ github.event.inputs.version }}"
+          
+            echo "3) 推送代码"
+            git push "https://${{ secrets.ACCESS_TOKEN }}@github.com/jerbe/jim-docs.git" HEAD:main
+      
+            echo "4) 触发工作流"
             curl -L \
             -X POST \
             -H "Accept: application/vnd.github+json" \

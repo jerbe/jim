@@ -11,8 +11,8 @@ import (
   @describe :
 */
 
-// checkIsNil 检测是否是真nil值
-func checkIsNil(v any) bool {
+// IsNil 检测是否是真nil值
+func IsNil(v any) bool {
 	if v != nil {
 		// 如果目标不是xx类型,则返回
 		typ := reflect.TypeOf(v)
@@ -33,12 +33,12 @@ func checkIsNil(v any) bool {
 // 如果没匹配到其中一项,则返回false
 func In(obj any, target any, targets ...any) bool {
 	if obj == nil {
-		if checkIsNil(target) {
+		if IsNil(target) {
 			return true
 		}
 
 		for i := 0; i < len(targets); i++ {
-			if checkIsNil(targets[i]) {
+			if IsNil(targets[i]) {
 				return true
 			}
 		}

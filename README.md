@@ -64,12 +64,12 @@ Here are the planned features:
   - [x] Receive chat messages
   - [x] Receive notification messages
 + [x] User Registration
-  - [ ] Verification code validation
+  - [x] Verification code validation
   - [ ] Strong password validation
   - [ ] Email binding
   - [ ] Limited registration time switch
 + [x] User Login
-  - [ ] Verification code validation
+  - [x] Verification code validation
   - [x] Cannot log in if disabled
   - [x] Cannot log in if deleted
 - [ ] User Logout

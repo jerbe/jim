@@ -68,6 +68,14 @@ var (
 	MessageIncorrectUsernameOrPassword = "用户名或密码错误"
 
 	MessageConfirmPasswordWrong = "确认密码错误"
+
+	MessageIncorrectUsernameOrPasswordMoreTimes = "用户或密码错误超过限制"
+
+	MessageEmptyCaptchaID = "验证码ID未填写"
+
+	MessageEmptyCaptcha = "验证码未填写"
+
+	MessageInvalidCaptcha = "验证码无效"
 )
 
 // MessageInvalidFormat 格式化参数无效错误
