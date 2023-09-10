@@ -1,4 +1,4 @@
-# JIM 一个简单的聊天系统
+# JIM (Jerbe开发的简易聊天系统): 一个简单的聊天系统
 *(本代码仅供学习,严禁用于非法行为)*
 
 ![](https://img.shields.io/github/actions/workflow/status/jerbe/jim/cross-build.yml)

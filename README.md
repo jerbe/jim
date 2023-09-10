@@ -1,4 +1,4 @@
-# JIM: A Simple Chat System
+# JIM (Jerbe's Instant Messaging): A Simple Chat System
 *(This code is for learning purposes only and is strictly prohibited for illegal activities)*
 
 *WARNING:*
