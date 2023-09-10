@@ -14,7 +14,7 @@
 
 
 ## Introduction
-JIM is a lightweight chat system with the following features
+JIM (Jerbe's Instant Messaging) is a lightweight chat system with the following features
 
 * Written purely in Golang, supporting private chat, group chat, and world channel chat.
 * Implements some common functionalities, including friend invitation, friend search, friend addition, friend deletion, group creation, group joining, group invitation, and group exit.
@@ -143,3 +143,7 @@ Here are the planned features:
 - [x] World Channel Chat
   - [ ] World channel switch
   - [ ] World channel mute
+
+# Other
+[[API Documentation]](http://github.com/jerbe/jim-docs)，[[Jcache - (Encapsulated Distributed Cache Integration Solution)]](http://github.com/jerbe/jcache)
+  
