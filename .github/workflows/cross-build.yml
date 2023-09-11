@@ -22,9 +22,11 @@ jobs:
     name: 构建项目
     steps:
       - name: 检查
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           fetch-tags: true
+          clean: false
 
       - name: 初始化环境
         id: event
