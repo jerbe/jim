@@ -7,8 +7,13 @@ on:
     inputs:
       version:
         description: '输入需要编译的版本:以字母"v"开头'
-        required: true
+        required: false
         default: ''
+      auto_version:
+        description: "自动递增版本"
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   buile_openwrt:
@@ -20,8 +25,7 @@ jobs:
         uses: actions/checkout@main
 
       - name: 初始化环境
-        env:
-          DEBIAN_FRONTEND: noninteractive
+        id: event
         run: |
           sudo -E apt-get -qq update
           sudo -E apt-get -qq install zip unzip
@@ -31,6 +35,21 @@ jobs:
           
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
+          
+          if [ "${{ github.event.inputs.auto_version}}" = "true" ] ; then
+              version_tag=$(git for-each-ref --sort=taggerdate --format '%(refname:short)' refs/tags | tail -n1)
+              IFS='.' read -r version_parts <<< "${version_tag}"
+              major="${version_parts[0]}"
+              minor="${version_parts[1]}"
+              patch="${version_parts[2]}"
+              # 递增修订号
+              patch=$((patch + 1))
+              new_version="${major}.${minor}.${patch}"
+        
+              echo "version=${new_version}" >> $GITHUB_OUTPUT
+          else
+              echo "version=${{github.event.inputs.version}}" >> $GITHUB_OUTPUT
+          fi
 
       - name: 下载依赖
         run: |
@@ -40,7 +59,6 @@ jobs:
         id: compile
         working-directory: ./
         run: |
-          
           function build_func {
             suffix=""
             if [ "$1" = "windows" ] ; then
@@ -89,7 +107,7 @@ jobs:
           bin_arrays=($(ls jim-*))
           for ((i=0; i<${#bin_arrays[@]}; i++)); do
            zip_name=$(echo ${bin_arrays[$i]}|awk -F '-' '{print $2"-"$3}'|awk -F'.' '{print $1}')
-           zip -r ${zip_name}-${{ github.event.inputs.version}}.zip ./${bin_arrays[$i]} ./config/ ./sql/
+           zip -r ${zip_name}-${{steps.event.outputs.version}}.zip ./${bin_arrays[$i]} ./config/ ./sql/
           done          
           echo "status=success" >> $GITHUB_OUTPUT
 
@@ -114,7 +132,7 @@ jobs:
             git add .
           
             echo "2) 提交更改"
-            git commit -am "${{ github.event.inputs.version }}"
+            git commit -am "${{steps.event.outputs.version}}"
           
             echo "3) 推送代码"
             git push "https://${{ secrets.ACCESS_TOKEN }}@github.com/jerbe/jim-docs.git" HEAD:main
@@ -126,7 +144,7 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.ACCESS_TOKEN }}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             https://api.github.com/repos/jerbe/jim-docs/actions/workflows/build.yml/dispatches \
-            -d '{"ref":"main","inputs":{"version":"${{ github.event.inputs.version }}  "}}'
+            -d '{"ref":"main","inputs":{"version":"${{steps.event.outputs.version}}"}}'
           else
             echo "没有东西需要提交"
             exit 0
@@ -135,9 +153,10 @@ jobs:
         uses: ncipollo/release-action@main
         if: ${{ steps.organize.outputs.status }} == 'success' && !cancelled()
         with:
-          tag: ${{ github.event.inputs.version}}
-          name: ${{ github.event.inputs.version}}
+          tag: ${{steps.event.outputs.version}}
+          name: ${{steps.event.outputs.version}}
           artifacts: ./bin/*.zip
           allowUpdates: true
           body: |
-            * JIM 简单的聊天系统
+            # JIM 简单的聊天系统
+            使用golang开发的简易聊天系统
