@@ -23,7 +23,6 @@ jobs:
     steps:
       - name: 检查
         uses: actions/checkout@main
-
       - name: 初始化环境
         id: event
         run: |
@@ -35,6 +34,8 @@ jobs:
           
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
+          git fetch
+          
           
           # 获取当前最后一次版本号
           version_tag=$(git for-each-ref --sort=taggerdate --format '%(refname:short)' refs/tags | tail -n1)
