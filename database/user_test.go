@@ -124,8 +124,8 @@ func TestUser_MarshalBinary(t *testing.T) {
 				Username:  tt.fields.Username,
 				Password:  tt.fields.Password,
 				BirthDate: tt.fields.BirthDate,
-				CreatedAt: tt.fields.CreatedAt,
-				UpdatedAt: tt.fields.UpdatedAt,
+				CreatedAt: *tt.fields.CreatedAt,
+				UpdatedAt: *tt.fields.UpdatedAt,
 			}
 			gotData, err := u.MarshalBinary()
 			if (err != nil) != tt.wantErr {
@@ -179,8 +179,8 @@ func TestUser_UnmarshalBinary(t *testing.T) {
 				Username:  tt.fields.Username,
 				Password:  tt.fields.Password,
 				BirthDate: tt.fields.BirthDate,
-				CreatedAt: tt.fields.CreatedAt,
-				UpdatedAt: tt.fields.UpdatedAt,
+				CreatedAt: *tt.fields.CreatedAt,
+				UpdatedAt: *tt.fields.UpdatedAt,
 			}
 			if err := u.UnmarshalBinary(tt.args.data); (err != nil) != tt.wantErr {
 				t.Errorf("UnmarshalBinary() error = %v, wantErr %v", err, tt.wantErr)

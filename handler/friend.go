@@ -746,14 +746,14 @@ func SubscribeFriendInviteHandler(ctx context.Context, payload *pubsub.Payload) 
 
 	// 如果邀请记录是进行中,则直接发给目标
 	if fi.Status == database.UserRelationInviteStatusPending {
-		websocketManager.PushJson(wsPayload, strconv.FormatInt(fi.TargetID, 10))
+		websocketManager.PushData(wsPayload, strconv.FormatInt(fi.TargetID, 10))
 		return
 	}
 
 	// 如果邀请记录是拒绝,则直接发给用户
 	// 因为同意的时候是直接say hello了
 	if fi.Status == database.UserRelationInviteStatusReject {
-		websocketManager.PushJson(wsPayload, strconv.FormatInt(fi.UserID, 10))
+		websocketManager.PushData(wsPayload, strconv.FormatInt(fi.UserID, 10))
 		return
 	}
 }

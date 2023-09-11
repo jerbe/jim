@@ -2,11 +2,6 @@ package log
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/jerbe/jim/utils"
-	"github.com/natefinch/lumberjack/v3"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/pkgerrors"
 	"io"
 	"os"
 	"path"
@@ -14,10 +9,17 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jerbe/jim/utils"
+
+	"github.com/gin-gonic/gin"
+	"github.com/natefinch/lumberjack/v3"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/pkgerrors"
 )
 
-const (
-	ServiceName = "jim_web_server"
+var (
+	serviceName = "[jim_web_server]"
 )
 
 /**
@@ -36,14 +38,22 @@ func init() {
 	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
 		return file + ":[" + runtime.FuncForPC(pc).Name() + "]:" + strconv.Itoa(line)
 	}
-
 	consoleWriter = zerolog.NewConsoleWriter(func(w *zerolog.ConsoleWriter) {
 		w.Out = os.Stdout
 	})
+}
 
-	requestLogger = newZeroLogger(fmt.Sprintf("%s-request.log", ServiceName))
-	infoLogger = newZeroLogger(fmt.Sprintf("%s-info.log", ServiceName))
-	errorLogger = newZeroLogger(fmt.Sprintf("%s-error.log", ServiceName))
+// Init 初始化
+func Init(svrName string) {
+	if svrName == serviceName {
+		return
+	}
+	Info().Str("old", serviceName).Str("new", svrName).Msg("改变改变服务名称")
+
+	serviceName = svrName
+	requestLogger = newZeroLogger(fmt.Sprintf("%s-request.log", serviceName))
+	infoLogger = newZeroLogger(fmt.Sprintf("%s-info.log", serviceName))
+	errorLogger = newZeroLogger(fmt.Sprintf("%s-error.log", serviceName))
 }
 
 func newZeroLogger(filename string) zerolog.Logger {
@@ -52,7 +62,7 @@ func newZeroLogger(filename string) zerolog.Logger {
 	if mode == strings.ToLower("dev") {
 		write = zerolog.MultiLevelWriter(write, consoleWriter)
 	}
-	return zerolog.New(write).With().Timestamp().Str("service", ServiceName).Logger()
+	return zerolog.New(write).With().Timestamp().Str("service", serviceName).Logger()
 }
 
 func newRollingFile(filename string) io.Writer {
@@ -69,37 +79,37 @@ func newRollingFile(filename string) io.Writer {
 }
 
 func Request() *zerolog.Event {
-	l := requestLogger.With().Logger()
+	l := requestLogger.With().Str("hostname", utils.GetHostname()).Logger()
 	return (&l).Info()
 }
 
 func Debug() *zerolog.Event {
-	l := infoLogger.With().Caller().Logger()
+	l := infoLogger.With().Str("hostname", utils.GetHostname()).Caller().Logger()
 	return (&l).Debug()
 }
 
 func Info() *zerolog.Event {
-	l := infoLogger.With().Caller().Logger()
+	l := infoLogger.With().Str("hostname", utils.GetHostname()).Caller().Logger()
 	return (&l).Info()
 }
 
 func Warn() *zerolog.Event {
-	l := errorLogger.With().Caller().Logger()
+	l := errorLogger.With().Str("hostname", utils.GetHostname()).Caller().Logger()
 	return (&l).Warn()
 }
 
 func Error() *zerolog.Event {
-	l := errorLogger.With().Caller().Stack().Logger()
+	l := errorLogger.With().Str("hostname", utils.GetHostname()).Caller().Stack().Logger()
 	return (&l).Error()
 }
 
 func Fatal() *zerolog.Event {
-	l := errorLogger.With().Caller().Logger()
+	l := errorLogger.With().Str("hostname", utils.GetHostname()).Caller().Logger()
 	return (&l).Fatal()
 }
 
 func Panic() *zerolog.Event {
-	l := errorLogger.With().Caller().Logger()
+	l := errorLogger.With().Str("hostname", utils.GetHostname()).Caller().Logger()
 	return (&l).Panic()
 }
 

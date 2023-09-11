@@ -335,10 +335,10 @@ func AddUser(user *User, opts ...*SetOptions) error {
 // ==============================================================
 // cacheKeyFormatUserID 格式化用户的ID 缓存 key
 func cacheKeyFormatUserID(id int64) string {
-	return fmt.Sprintf("user:id:%d", id)
+	return fmt.Sprintf("%s:user:id:%d", CacheKeyPrefix, id)
 }
 
 // cacheKeyFormatUsername 格式化用户的用户名 缓存 key
 func cacheKeyFormatUsername(username string) string {
-	return fmt.Sprintf("user:username:%s", username)
+	return fmt.Sprintf("%s:user:username:%s", CacheKeyPrefix, username)
 }

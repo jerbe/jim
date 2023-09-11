@@ -725,10 +725,10 @@ func CreateGroupTx(creatorID int64, memberIDs []int64) (group *Group, err error)
 // ==============================================================
 // cacheKeyFormatGroupID 格式化群组的ID 缓存 key
 func cacheKeyFormatGroupID(id int64) string {
-	return fmt.Sprintf("group:id:%d", id)
+	return fmt.Sprintf("%s:group:id:%d", CacheKeyPrefix, id)
 }
 
 // cacheKeyFormatGroupMembers 格式化群组成员 缓存 key
 func cacheKeyFormatGroupMembers(id int64) string {
-	return fmt.Sprintf("group:members:id:%d", id)
+	return fmt.Sprintf("%s:group:members:id:%d", CacheKeyPrefix, id)
 }

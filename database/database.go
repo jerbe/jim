@@ -28,9 +28,9 @@ type Database struct {
 	Mongo *mongo.Client
 }
 
-const (
+var (
 	// MYSQL 库跟表
-	DatabaseMySQLIM = "`jb_im`"
+	DatabaseMySQLIM = "`jim`"
 
 	// TableGroups 群组数据表
 	TableGroups = DatabaseMySQLIM + ".`groups`"
@@ -48,21 +48,44 @@ const (
 	TableUserRelationInvite = DatabaseMySQLIM + ".`user_relation_invite`"
 
 	// MongoDB 库跟集合
-	DatabaseMongodbIM = "jb_im"
+	DatabaseMongodbIM = "jim"
 	CollectionRoom    = "room"
 	CollectionMessage = "message"
 )
 
-var GlobCtx = context.Background()
+func constDatabase() {
+	// TableGroups 群组数据表
+	TableGroups = DatabaseMySQLIM + ".`groups`"
 
-var GlobDB *Database
+	// TableGroupMembers 群组成员表
+	TableGroupMembers = DatabaseMySQLIM + ".`group_member`"
 
-var initialized bool
+	// TableUsers 用户数据表
+	TableUsers = DatabaseMySQLIM + ".`users`"
+
+	// TableUserRelation 用户关系表
+	TableUserRelation = DatabaseMySQLIM + ".`user_relation`"
+
+	// TableUserRelationInvite 用户关系邀请表
+	TableUserRelationInvite = DatabaseMySQLIM + ".`user_relation_invite`"
+}
+
+var (
+	CacheKeyPrefix = config.GlobConfig().Main.ServerName
+
+	GlobCtx = context.Background()
+
+	GlobDB *Database
+
+	initialized bool
+)
 
 func Init(cfg config.Config) (db *Database, err error) {
 	if initialized {
 		return nil, errors.New("数据库已经配置过")
 	}
+
+	CacheKeyPrefix = cfg.Main.ServerName
 
 	// 初始化MYSQL
 	mysqlCfg := cfg.MySQL
@@ -79,6 +102,9 @@ func Init(cfg config.Config) (db *Database, err error) {
 	mysqlDB.SetMaxOpenConns(10) // 设置数据库连接池的最大连接数
 	mysqlDB.SetMaxIdleConns(5)
 
+	if mysqlCfg.MainDB != "" {
+		DatabaseMySQLIM = mysqlCfg.MainDB
+	}
 	db = new(Database)
 	db.MySQL = mysqlDB
 
@@ -106,7 +132,13 @@ func Init(cfg config.Config) (db *Database, err error) {
 		return nil, err
 	}
 
+	if mongodbCfg.MainDB != "" {
+		DatabaseMongodbIM = mongodbCfg.MainDB
+	}
 	db.Mongo = mongodbCli
+
+	// 变量重新整理一遍
+	constDatabase()
 
 	GlobDB = db
 	initialized = true

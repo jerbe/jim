@@ -63,7 +63,10 @@ type ChatMessage struct {
 	// Body 消息体;
 	Body *ChatMessageBody `json:"body"`
 
-	// PublishTargets 群成员ID列表
+	// PublishTargets 推送目标列表
+	// 为什么增加 PublishTargets 这个参数?
+	// 因为分布式中,会多个服务实例都订阅到该方法,将导致多个服务实例再去查询数据库,比方说群成员列表等,所以预先加入 PublishTargets .
+	// 订阅者可以直接从传参拿需要推送的目标 ,能尽量少请求数据库就尽量少请求
 	PublishTargets []int64 `json:"publish_targets,omitempty"`
 }
 

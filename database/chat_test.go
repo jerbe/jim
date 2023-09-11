@@ -30,14 +30,23 @@ func TestAddMessage(t *testing.T) {
 					RoomID:      "00000001_00000002",
 					Type:        1,
 					SessionType: 1,
-					SenderID:    "1",
-					ReceiverID:  "2",
+					SenderID:    1,
+					ReceiverID:  2,
 					SendStatus:  1,
 					ReadStatus:  0,
 					Status:      1,
-					Body:        "{\"text\": \"纯文本消息\"}",
-					CreatedAt:   time.Now().UnixMilli(),
-					UpdatedAt:   time.Now().UnixNano(),
+					Body: ChatMessageBody{
+						Text:          "纯文本消息",
+						Src:           "",
+						Format:        "",
+						Size:          "",
+						Longitude:     "",
+						Latitude:      "",
+						Scale:         0,
+						LocationLabel: "",
+					},
+					CreatedAt: time.Now().UnixMilli(),
+					UpdatedAt: time.Now().UnixNano(),
 				},
 			},
 			wantErr: false,
@@ -60,14 +69,23 @@ func BenchmarkAddMessageWithTransaction(b *testing.B) {
 				RoomID:      "0000000100000002",
 				Type:        1,
 				SessionType: 1,
-				SenderID:    "1",
-				ReceiverID:  "2",
+				SenderID:    1,
+				ReceiverID:  2,
 				SendStatus:  1,
 				ReadStatus:  0,
 				Status:      1,
-				Body:        "{\"text\": \"纯文本消息\"}",
-				CreatedAt:   time.Now().UnixMilli(),
-				UpdatedAt:   time.Now().UnixMilli(),
+				Body: ChatMessageBody{
+					Text:          "纯文本消息",
+					Src:           "",
+					Format:        "",
+					Size:          "",
+					Longitude:     "",
+					Latitude:      "",
+					Scale:         0,
+					LocationLabel: "",
+				},
+				CreatedAt: time.Now().UnixMilli(),
+				UpdatedAt: time.Now().UnixMilli(),
 			}
 			err := AddChatMessageTx(msg)
 			if err != nil {
@@ -86,14 +104,23 @@ func BenchmarkAddMessage(b *testing.B) {
 				RoomID:      "0000000100000002",
 				Type:        1,
 				SessionType: 1,
-				SenderID:    "1",
-				ReceiverID:  "2",
+				SenderID:    1,
+				ReceiverID:  2,
 				SendStatus:  1,
 				ReadStatus:  0,
 				Status:      1,
-				Body:        "{\"text\": \"纯文本消息\"}",
-				CreatedAt:   time.Now().UnixMilli(),
-				UpdatedAt:   time.Now().UnixMilli(),
+				Body: ChatMessageBody{
+					Text:          "纯文本消息",
+					Src:           "",
+					Format:        "",
+					Size:          "",
+					Longitude:     "",
+					Latitude:      "",
+					Scale:         0,
+					LocationLabel: "",
+				},
+				CreatedAt: time.Now().UnixMilli(),
+				UpdatedAt: time.Now().UnixMilli(),
 			}
 			err := AddChatMessage(msg)
 			if err != nil {
@@ -109,14 +136,23 @@ func TestAddMessageWithTransaction(t *testing.T) {
 		RoomID:      "0000000100000002",
 		Type:        1,
 		SessionType: 1,
-		SenderID:    "1",
-		ReceiverID:  "2",
+		SenderID:    1,
+		ReceiverID:  2,
 		SendStatus:  1,
 		ReadStatus:  0,
 		Status:      1,
-		Body:        "{\"text\": \"纯文本消息\"}",
-		CreatedAt:   time.Now().UnixMilli(),
-		UpdatedAt:   time.Now().UnixMilli(),
+		Body: ChatMessageBody{
+			Text:          "纯文本消息",
+			Src:           "",
+			Format:        "",
+			Size:          "",
+			Longitude:     "",
+			Latitude:      "",
+			Scale:         0,
+			LocationLabel: "",
+		},
+		CreatedAt: time.Now().UnixMilli(),
+		UpdatedAt: time.Now().UnixMilli(),
 	}
 
 	//t.Run("事务", func(t *testing.T) {
@@ -133,14 +169,23 @@ func TestRollbackMessage(t *testing.T) {
 			RoomID:      "0000000100000002",
 			Type:        1,
 			SessionType: 1,
-			SenderID:    "1",
-			ReceiverID:  "2",
+			SenderID:    1,
+			ReceiverID:  2,
 			SendStatus:  1,
 			ReadStatus:  0,
 			Status:      1,
-			Body:        "{\"text\": \"纯文本消息\"}",
-			CreatedAt:   time.Now().UnixMilli(),
-			UpdatedAt:   time.Now().UnixMilli(),
+			Body: ChatMessageBody{
+				Text:          "纯文本消息",
+				Src:           "",
+				Format:        "",
+				Size:          "",
+				Longitude:     "",
+				Latitude:      "",
+				Scale:         0,
+				LocationLabel: "",
+			},
+			CreatedAt: time.Now().UnixMilli(),
+			UpdatedAt: time.Now().UnixMilli(),
 		}
 
 		err := AddChatMessage(msg)
@@ -162,7 +207,7 @@ func TestRollbackMessage(t *testing.T) {
 func TestChatMessageList(t *testing.T) {
 	t.Run("消息列表", func(t *testing.T) {
 
-		rs, err := GetChatMessageList("0000000100000002", 1, NewChatMessageListOptions().SetLastMessageID(100).SetLimit(1000))
+		rs, err := GetChatMessageList((&GetChatMessageListFilter{RoomID: "0000000100000002", SessionType: 1}).SetLastMessageID(100).SetLimit(1000))
 		if err != nil {
 			t.Fatal(err)
 		}

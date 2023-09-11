@@ -112,7 +112,7 @@ const (
 // ChatMessage 聊天消息体
 type ChatMessage struct {
 	// ID
-	ID primitive.ObjectID `bson:"_id" json:"id"`
+	ID primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 
 	// 消息ID
 	MessageID int64 `bson:"message_id" json:"message_id"`
@@ -227,7 +227,6 @@ func AddChatMessage(msg *ChatMessage) error {
 				"updated_at": now,
 			},
 			"$setOnInsert": bson.M{
-				"_id":          primitive.NewObjectID(),
 				"room_id":      msg.RoomID,
 				"session_type": msg.SessionType,
 				"created_at":   now,
@@ -241,14 +240,14 @@ func AddChatMessage(msg *ChatMessage) error {
 
 	// 设置消息ID
 	msg.MessageID = room.LastMessageID
-	msg.ID = primitive.NewObjectID()
 
 	// 递增房间号的消息排列索引
-	_, err = db.Collection(CollectionMessage).InsertOne(GlobCtx, msg)
+	rs, err := db.Collection(CollectionMessage).InsertOne(GlobCtx, msg)
 	if err != nil {
 		// @TODO 推送到重试管道,进行重试插入
 		return errors.Wrap(err)
 	}
+	msg.ID = rs.InsertedID.(primitive.ObjectID)
 
 	// 更新聊天室的最后一条消息
 	_, err = db.Collection(CollectionRoom).
@@ -274,6 +273,7 @@ func AddChatMessage(msg *ChatMessage) error {
 	}
 
 	// 将聊天数据推送到缓存定长队列中去
+	// @TODO 暂时这样push,但是这样处理不准确,需要做优化. 因为每个响应的是时长不一样,可能导致顺序不是正确的,甚至是断续的. 如 [1,3,2,4,7,6,5,8,9,11,10,19]
 	cacheKey := cacheKeyFormatLastMessageList(msg.RoomID, msg.SessionType)
 	err = jcache.Push(GlobCtx, cacheKey, msg)
 	if err != nil && err.Error() == "WRONGTYPE Operation against a key holding the wrong kind of value" {
@@ -305,7 +305,6 @@ func AddChatMessageTx(msg *ChatMessage) error {
 						"updated_at": now,
 					},
 					"$setOnInsert": bson.M{
-						"_id":          primitive.NewObjectID(),
 						"session_type": msg.SessionType,
 						"created_at":   now,
 					},
@@ -318,13 +317,13 @@ func AddChatMessageTx(msg *ChatMessage) error {
 
 			// 设置消息ID为递增的ID
 			msg.MessageID = room.LastMessageID
-			msg.ID = primitive.NewObjectID()
 
 			// 递增房间号的消息排列索引
-			_, err = db.Collection(CollectionMessage).InsertOne(ctxb, msg)
+			rs, err := db.Collection(CollectionMessage).InsertOne(ctxb, msg)
 			if err != nil {
 				return nil, errors.Wrap(err)
 			}
+			msg.ID = rs.InsertedID.(primitive.ObjectID)
 
 			// 更新聊天室的最后一条消息
 			_, err = db.Collection(CollectionRoom).
@@ -428,6 +427,21 @@ type GetChatMessageListFilter struct {
 	Sort          any    `bson:"sort"`
 	LastMessageID *int64 `bson:"last_message_id"`
 	Limit         *int   `bson:"limit"`
+}
+
+func (f *GetChatMessageListFilter) SetLimit(val int) *GetChatMessageListFilter {
+	f.Limit = &val
+	return f
+}
+
+func (f *GetChatMessageListFilter) SetSort(val any) *GetChatMessageListFilter {
+	f.Sort = val
+	return f
+}
+
+func (f *GetChatMessageListFilter) SetLastMessageID(val int64) *GetChatMessageListFilter {
+	f.LastMessageID = &val
+	return f
 }
 
 // GetChatMessageList 获取消息列表
@@ -550,5 +564,5 @@ func GetLastChatMessageList(roomID string, sessionType int, opts ...*GetOptions)
 // ==================================================================================
 // cacheKeyFormatLastMessageList 格式化最后消息列表的缓存 key
 func cacheKeyFormatLastMessageList(roomID string, sessionType int) string {
-	return fmt.Sprintf("chat_message:last_list:%d_%s", sessionType, roomID)
+	return fmt.Sprintf("%s:chat_message:last_list:%d_%s", CacheKeyPrefix, sessionType, roomID)
 }

@@ -1,9 +1,14 @@
 package handler
 
 import (
+	"context"
+	"fmt"
+	"github.com/jerbe/jim/config"
 	"github.com/jerbe/jim/database"
 	"github.com/mojocn/base64Captcha"
+	"github.com/redis/go-redis/v9"
 	"image/color"
+	"time"
 )
 
 /**
@@ -19,6 +24,43 @@ const (
 	// NeedCaptchaLoginFailTimes 需要验证码的失败登录次数
 	NeedCaptchaLoginFailTimes = 3
 )
+
+// RedisCaptchaStore 用于存储验证码的Redis结构
+type RedisCaptchaStore struct {
+	cli redis.UniversalClient
+}
+
+func (s *RedisCaptchaStore) genKey(id string) string {
+	return fmt.Sprintf("%s:captcha:id:%s", config.GlobConfig().Main.ServerName, id)
+}
+
+func (s *RedisCaptchaStore) Set(id string, value string) error {
+	return s.cli.Set(context.Background(), s.genKey(id), value, time.Minute).Err()
+}
+
+func (s *RedisCaptchaStore) Get(id string, clear bool) string {
+	key := s.genKey(id)
+	val := s.cli.Get(context.Background(), key).Val()
+	if clear {
+		s.cli.Del(context.Background(), key)
+	}
+	return val
+}
+
+func (s *RedisCaptchaStore) Verify(id string, answer string, clear bool) bool {
+	key := s.genKey(id)
+	val, err := s.cli.Get(context.Background(), key).Result()
+	// 有设置清除标签,先删除key,
+	if clear {
+		s.cli.Del(context.Background(), key)
+	}
+
+	if err != nil {
+		return false
+	}
+
+	return answer != "" && val == answer
+}
 
 // Captcha 验证码组件
 type Captcha struct {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/mojocn/base64Captcha"
-	"github.com/redis/go-redis/v9"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -209,8 +208,9 @@ func AuthLoginHandler(ctx *gin.Context) {
 	}
 
 	// 1. 验证登录失败次数是否超过限制
-	loginFailRedisKey := fmt.Sprintf("jim:user:login_fail:%s", req.Username)
+	loginFailRedisKey := fmt.Sprintf("%s:user:login_fail:%s", config.GlobConfig().Main.ServerName, req.Username)
 	times, err := database.GlobDB.Redis.Get(context.Background(), loginFailRedisKey).Int64()
+
 	if err != nil && !errors.IsNoRecord(err) {
 		log.ErrorFromGinContext(ctx).Err(err).
 			Str("err_format", fmt.Sprintf("%+v", err)).
@@ -348,43 +348,6 @@ func AuthLoginHandler(ctx *gin.Context) {
 	resp.FailTimes = nil
 	resp.NeedCaptcha = nil
 	JSON(ctx, resp)
-}
-
-// RedisCaptchaStore 用于存储验证码的Redis结构
-type RedisCaptchaStore struct {
-	cli redis.UniversalClient
-}
-
-func (s *RedisCaptchaStore) genKey(id string) string {
-	return fmt.Sprintf("jim:captcha:id:%s", id)
-}
-
-func (s *RedisCaptchaStore) Set(id string, value string) error {
-	return s.cli.Set(context.Background(), s.genKey(id), value, time.Minute).Err()
-}
-
-func (s *RedisCaptchaStore) Get(id string, clear bool) string {
-	key := s.genKey(id)
-	val := s.cli.Get(context.Background(), key).Val()
-	if clear {
-		s.cli.Del(context.Background(), key)
-	}
-	return val
-}
-
-func (s *RedisCaptchaStore) Verify(id string, answer string, clear bool) bool {
-	key := s.genKey(id)
-	val, err := s.cli.Get(context.Background(), key).Result()
-	// 有设置清除标签,先删除key,
-	if clear {
-		s.cli.Del(context.Background(), key)
-	}
-
-	if err != nil {
-		return false
-	}
-
-	return answer != "" && val == answer
 }
 
 // GetCaptchaRequest

@@ -2,17 +2,44 @@ main:
   # jwt_signing_key 用于JWT,如果修改,将影响到已登录用户验证
   jwt_signing_key: "my_secret_key"
 
+  # 服务名,用于日志或缓存的key等,作为分类使用
+  server_name: "jim"
+
 http:
+  # http服务的监听端口
   port: 8080
 
+# Redis相关配置
 redis:
+  # 连接类型: single(单例),sentinel(哨兵),cluster(集群)
+  mode: ""
+
+  # redis集群连接地址
   addrs:
     - "192.168.31.101:6379"
+
+  # 主库名称; 当选择哨兵模式(mode=sentinel)时需要填写
+  master_name: ""
+
+  # 数据库; 默认"0"
+  database: ""
+
+  # 鉴权账户
+  username: ""
+
+  # 鉴权密码
   password: "root"
 
 mysql:
+  # 连接地址
   uri: "root:root@tcp(192.168.31.101:3306)/?charset=utf8&parseTime=true&loc=Local"
 
+  # 主数据库名
+  main_db: "jb_im"
+
 mongodb:
-  uri: "mongodb://192.168.31.101:27017,192.168.31.101:27018,192.168.31.101:27019/jb_im?replicaSet=rs0&authSource=admin&readPreference=secondary"
+  # 连接地址
+  uri: "mongodb://192.168.31.101:27017,192.168.31.101:27018,192.168.31.101:27019/?replicaSet=rs0&authSource=admin&readPreference=secondary"
+  # 主数据库名
+  main_db: "jb_im"
 

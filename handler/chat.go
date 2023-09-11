@@ -228,6 +228,16 @@ func sendChatMessage(ctx *gin.Context, req *SendChatMessageRequest, pubSubMsgFn 
 		ReceiverID:  msg.ReceiverID,
 		MessageID:   msg.MessageID,
 		CreatedAt:   msg.CreatedAt,
+		Body: ChatMessageBody{
+			Text:          req.Body.Text,
+			Src:           req.Body.Src,
+			Format:        req.Body.Format,
+			Size:          req.Body.Size,
+			Longitude:     req.Body.Longitude,
+			Latitude:      req.Body.Latitude,
+			Scale:         req.Body.Scale,
+			LocationLabel: req.Body.LocationLabel,
+		},
 	}
 	JSON(ctx, rsp)
 
@@ -512,10 +522,9 @@ func SubscribeChatMessageHandler(ctx context.Context, payload *pubsub.Payload) {
 
 	switch chatMsg.SessionType {
 	case database.ChatMessageSessionTypePrivate: // 处理私聊会话
-		websocketManager.PushJson(wsPayload, chatMsg.SenderID, chatMsg.ReceiverID)
+		websocketManager.PushData(wsPayload, chatMsg.SenderID, chatMsg.ReceiverID)
 	case database.ChatMessageSessionTypeGroup: // 处理群聊会话
-		// 为什么增加GroupMembers这个参数?
-		// 因为分布式中,会多个实例都订阅到该方法,将导致多个实例都会执行 database.GetGroupMemberIDsString 的方法,所以 加入 PublishTargets,直接从数据中拿 ,能尽量少请求数据库就尽量少请求
+
 		memberStrIds := chatMsg.PublishTargets
 		if len(memberStrIds) == 0 {
 			// 找出群成员的ID列表
@@ -543,8 +552,8 @@ func SubscribeChatMessageHandler(ctx context.Context, payload *pubsub.Payload) {
 			return
 		}
 
-		websocketManager.PushJson(wsPayload, anySlice...)
+		websocketManager.PushData(wsPayload, anySlice...)
 	case database.ChatMessageSessionTypeWorld: // 处理世界会话
-		websocketManager.PushJson(wsPayload)
+		websocketManager.PushData(wsPayload)
 	}
 }

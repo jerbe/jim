@@ -305,11 +305,11 @@ func UpdateUserRelationInvite(filter *UpdateUserRelationInviteFilter, data *Upda
 // ========================================================================
 // cacheKeyFormatUserRelationInviteID 格式化根据ID获取建立用户关系请求的键
 func cacheKeyFormatUserRelationInviteID(id int64) string {
-	return fmt.Sprintf("user_relation_invite:id:%d", id)
+	return fmt.Sprintf("%s:user_relation_invite:id:%d", CacheKeyPrefix, id)
 }
 
 // cacheKeyFormatUserRelationInviteUserIDs 格式化根据用户ID跟目标用户ID获取建立用户关系请求的键
 func cacheKeyFormatUserRelationInviteUserIDs(userID, targetID int64) string {
 	a, b := utils.SortInt(userID, targetID)
-	return fmt.Sprintf("user_relation_invite:user_id:%d_%d", a, b)
+	return fmt.Sprintf("%s:user_relation_invite:user_id:%d_%d", CacheKeyPrefix, a, b)
 }

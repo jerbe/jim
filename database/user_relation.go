@@ -538,11 +538,11 @@ func UpdateUserRelationTx(filter *UpdateUserRelationFilter, data *UpdateUserRela
 
 // cacheKeyFormatUserRelationID 格式化用户关系ID的缓存 key
 func cacheKeyFormatUserRelationID(id int64) string {
-	return fmt.Sprintf("user_relation:id:%d", id)
+	return fmt.Sprintf("%s:user_relation:id:%d", CacheKeyPrefix, id)
 }
 
 // cacheKeyFormatUserRelationUserIDs 格式化用户关系的用户ID 缓存 key
 func cacheKeyFormatUserRelationUserIDs(userAID, userBID int64) string {
 	a, b := utils.SortInt(userAID, userBID)
-	return fmt.Sprintf("user_relation:user_id:%d_%d", a, b)
+	return fmt.Sprintf("%s:user_relation:user_id:%d_%d", CacheKeyPrefix, a, b)
 }
