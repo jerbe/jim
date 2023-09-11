@@ -41,15 +41,11 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git fetch
           
-          echo "显示所有标签:"
-          git tag
-          
-          
           # 获取当前最后一次版本号
           version_tag=$(git for-each-ref --sort=taggerdate --format '%(refname:short)' refs/tags | tail -n1)
           echo "最后一次打标版本号:${version_tag}"
           echo "手动打标版本号:${{github.event.inputs.version}}"
-          echo "自动递增版本号:${{github.event.inputs.auto_version}}"
+          echo "自动递增版本号:${{github.event.inputs.auto_version}}"  
           
           new_version=${{github.event.inputs.version}}
           if [[ "${{github.event.inputs.version}}" = "" && "${{github.event.inputs.auto_version}}" = "false" ]] ; then
@@ -68,8 +64,6 @@ jobs:
           
           echo "版本升级: ${version_tag} => ${new_version}"
           echo "version=${new_version}" >> $GITHUB_OUTPUT
-          echo "测试"
-          exit 1
 
       - name: 下载依赖
         run: |
