@@ -39,6 +39,9 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git fetch
           
+          echo "显示所有标签:"
+          git tag
+          
           
           # 获取当前最后一次版本号
           version_tag=$(git for-each-ref --sort=taggerdate --format '%(refname:short)' refs/tags | tail -n1)
