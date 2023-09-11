@@ -38,6 +38,20 @@ JIM (Jerbe's Instant Messaging) is a lightweight chat system with the following 
     4) Because we need to manage chat messages, when sending a message, the message is first stored in the database and then subscribed and pushed after being successfully stored.
     5) Supports getting the latest X messages from each room and traversing historical messages.
 
+## Related Unit Tests
+### Test Sending Chat Record Speed
+```bash
+  Testing sending speed, 5750 concurrent executions in 10 seconds. Each operation took 2151984 nanoseconds, approximately 2.151984 milliseconds. It doesn't feel fast enough, and there are quite a few allocations. Further optimization is needed. Limited by the machine configuration, it's unclear how it would perform on a high-end configuration.
+  
+  > /usr/local/opt/go/libexec/bin/go test -c -o /data/github.com/jerbe/jim/bin/handler_BenchmarkChatSendMessageParallel.test github.com/jerbe/jim/handler #gosetup
+  > /data/github.com/jerbe/jim/bin/handler_BenchmarkChatSendMessageParallel.test -test.v -test.paniconexit0 -test.bench ^\QBenchmarkChatSendMessageParallel\E$ -test.run ^$ -test.benchmem -test.benchtime=10s
+  > goos: darwin
+  > goarch: amd64
+  > pkg: github.com/jerbe/jim/handler
+  > cpu: Intel(R) Core(TM) i5-4308U CPU @ 2.80GHz
+  > BenchmarkChatSendMessageParallel-4   	    5750	   2151984 ns/op	  469167 B/op	    3090 allocs/op
+```
+
 ## Design Diagrams
 
 
@@ -73,6 +87,7 @@ Here are the planned features:
   - [x] Cannot log in if disabled
   - [x] Cannot log in if deleted
 - [ ] User Logout
+- [ ] Recover Account
 - [x] Account Information
   - [ ] Password modification
   - [ ] Avatar modification
@@ -126,7 +141,8 @@ Here are the planned features:
   - [ ] Voice chat
   - [ ] Video chat
   - [ ] Mark messages as read
-  - [x] Cannot chat if blocked by a friend
+  - [ ] Retract Chat Content
+- [x] Cannot chat if blocked by a friend
   - [x] Cannot chat if deleted by a friend
 - [x] Group Chat
   - [x] Send plain text
@@ -138,6 +154,7 @@ Here are the planned features:
   - [ ] Send location
   - [ ] Voice chat
   - [ ] Mark messages as read
+  - [ ] Retract Chat Content
   - [x] Mute all
   - [x] Mute specific group members
 - [x] World Channel Chat

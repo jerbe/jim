@@ -108,7 +108,7 @@ func BenchmarkChatSendMessageUseApi(b *testing.B) {
 	//r := gin.New()
 	jsonData := `{
     "action_id":"随机字符串",
-    "receiver_id":2,
+    "target_id":2,
     "session_type":1,
     "type":1,
     "body":{"text":"test"}
@@ -196,7 +196,7 @@ func BenchmarkChatSendMessage(b *testing.B) {
 	r := gin.New()
 	jsonData := `{
     "action_id":"随机字符串",
-    "receiver_id":"2",
+    "target_id":"2",
     "session_type":1,
     "type":1,
     "body":{"text":"test"}
@@ -259,7 +259,7 @@ func BenchmarkChatSendMessageParallel(b *testing.B) {
 	r := gin.New()
 	jsonData := `{
     "action_id":"随机字符串",
-    "receiver_id":2,
+    "target_id":2,
     "session_type":1,
     "type":1,
     "body":{"text":"test"}
@@ -307,6 +307,7 @@ func BenchmarkChatSendMessageParallel(b *testing.B) {
 			CheckAuthMiddleware()(ctx)
 			SendChatMessageHandler(ctx)
 
+			b.StopTimer()
 			go func(writer io.Writer, reader io.ReadCloser) {
 				defer reader.Close()
 				_, err = io.Copy(writer, reader)
@@ -319,7 +320,7 @@ func BenchmarkChatSendMessageParallel(b *testing.B) {
 					log.Println("134", err)
 				}
 			}(file, w.Result().Body)
-
+			b.StartTimer()
 		}
 	})
 

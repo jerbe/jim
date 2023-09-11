@@ -34,6 +34,21 @@ JIM(Jerbe's Instant Messaging) 是一个轻量的聊天系统，
     3）在多服务实例的情况下,由于用户建立WS链接的服务器是随机的,所以我们在每个服务实例里使用`websocket.manager`包的管理器进行链接统一管理,订阅到的数据最终也有管理器进行分发到不同的用户链接上。
     4）因为我们需要管理聊天消息，所以发消息时，消息是先入库，成功后再进行订阅推送。
     5）支持获取每个房间的最近X条消息，及历史消息遍历。
+
+## 相关单测
+### 测试发送聊天记录速度
+```bash
+  测试发送速度,10s执行了5750个并发,每个op耗时2151984纳秒,约等于2.151984毫秒感觉不够快,allocs还挺多的,得继续优化.受限于机器配置,不知道高配置怎么样
+  
+  > /usr/local/opt/go/libexec/bin/go test -c -o /data/github.com/jerbe/jim/bin/handler_BenchmarkChatSendMessageParallel.test github.com/jerbe/jim/handler #gosetup
+  > /data/github.com/jerbe/jim/bin/handler_BenchmarkChatSendMessageParallel.test -test.v -test.paniconexit0 -test.bench ^\QBenchmarkChatSendMessageParallel\E$ -test.run ^$ -test.benchmem -test.benchtime=10s
+  > goos: darwin
+  > goarch: amd64
+  > pkg: github.com/jerbe/jim/handler
+  > cpu: Intel(R) Core(TM) i5-4308U CPU @ 2.80GHz
+  > BenchmarkChatSendMessageParallel-4   	    5750	   2151984 ns/op	  469167 B/op	    3090 allocs/op
+```
+
 ## 设计图纸
 
 ##### 消息发送基本架构图
@@ -65,6 +80,7 @@ JIM(Jerbe's Instant Messaging) 是一个轻量的聊天系统，
   - [x] 被禁用无法登录
   - [x] 被删除无法登录
 - [ ] 用户登出
+- [ ] 找回账户
 - [x] 账户信息
   - [ ] 密码修改
   - [ ] 头型修改
@@ -118,6 +134,7 @@ JIM(Jerbe's Instant Messaging) 是一个轻量的聊天系统，
   - [ ] 语音聊天
   - [ ] 视频聊天
   - [ ] 私聊消息已读
+  - [ ] 撤回聊天内容
   - [x] 被好友拉黑无法对话
   - [x] 被好友删除无法对话
 - [x] 群聊
@@ -130,6 +147,7 @@ JIM(Jerbe's Instant Messaging) 是一个轻量的聊天系统，
   - [ ] 语音聊天
   - [ ] 视频聊天
   - [ ] 消息已读
+  - [ ] 撤回聊天内容
   - [x] 全体禁言
   - [x] 某群成员禁言
 - [x] 世界频道聊天

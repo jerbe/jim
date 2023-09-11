@@ -19,7 +19,7 @@ var chatMessagePool = &sync.Pool{
 
 var chatMessageBodyPool = &sync.Pool{
 	New: func() any {
-		return new(*ChatMessageBody)
+		return new(ChatMessageBody)
 	},
 }
 

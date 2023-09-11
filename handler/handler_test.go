@@ -4,8 +4,8 @@ import (
 	"github.com/jerbe/jcache"
 	"github.com/jerbe/jim/config"
 	"github.com/jerbe/jim/database"
-	"github.com/jerbe/jim/log"
 	"github.com/jerbe/jim/pubsub"
+	"log"
 	"testing"
 )
 
@@ -16,23 +16,25 @@ import (
 */
 
 func TestMain(t *testing.M) {
-	log.Info().Msg("服务初始化中...")
-	defer log.Warn().Msg("服务已关闭")
+	log.Println("服务初始化中...")
+	defer log.Println("服务已关闭...")
 
 	// 加载配置
+	log.Println("加载配置中...")
 	cfg, err := config.Init()
 	if err != nil {
-		log.Fatal().Err(err).Msg("加载配置文件失败")
+		log.Println("加载配置文件失败")
 	}
 
+	log.Println("配置推收模块('pubsub')...")
 	err = pubsub.Init(cfg)
 	if err != nil {
-		log.Fatal().Err(err).Msg("初始化推收模块('pubsub')失败")
+		log.Fatalln("初始化推收模块('pubsub')失败")
 	}
 
 	// 配置数据库
 	if _, err = database.Init(cfg); err != nil {
-		log.Fatal().Err(err).Msg("初始化数据模块('database')失败")
+		log.Fatalln("初始化数据模块('database')失败")
 	}
 
 	jcacheCfg := jcache.Config{
@@ -47,7 +49,7 @@ func TestMain(t *testing.M) {
 	}
 	err = jcache.Init(&jcacheCfg)
 	if err != nil {
-		log.Fatal().Err(err).Msg("初始化缓存模块('cache')失败")
+		log.Fatalln("初始化缓存模块('cache')失败")
 	}
 	t.Run()
 }

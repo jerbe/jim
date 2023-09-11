@@ -1,6 +1,7 @@
 #bin/bash
 # mkdir ./bin
 echo "删除已编译文件"
+rm -rf ./*\.log
 rm -rf ./bin/*
 
 echo "复制配置文件"
