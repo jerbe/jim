@@ -23,6 +23,9 @@ jobs:
     steps:
       - name: 检查
         uses: actions/checkout@main
+        with:
+          fetch-tags: true
+
       - name: 初始化环境
         id: event
         run: |
