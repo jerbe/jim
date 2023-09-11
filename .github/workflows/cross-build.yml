@@ -36,8 +36,18 @@ jobs:
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
           
-          if [ "${{ github.event.inputs.auto_version}}" = "true" ] ; then
-              version_tag=$(git for-each-ref --sort=taggerdate --format '%(refname:short)' refs/tags | tail -n1)
+          # 获取当前最后一次版本号
+          version_tag=$(git for-each-ref --sort=taggerdate --format '%(refname:short)' refs/tags | tail -n1)
+          echo "最后一次打标版本号:${version_tag}"
+          echo "手动打标版本号:${{github.event.inputs.version}}"
+          echo "自动递增版本号:${{github.event.inputs.auto_version}}"
+          
+          new_version=${{github.event.inputs.version}}
+          if [[ "${{github.event.inputs.version}}" = "" && "${{github.event.inputs.auto_version}}" = "false" ]] ; then
+            new_version=${version_tag}
+          fi
+          
+          if [ "${{github.event.inputs.auto_version}}" = "true" ] ; then
               IFS='.' read -r version_parts <<< "${version_tag}"
               major="${version_parts[0]}"
               minor="${version_parts[1]}"
@@ -45,11 +55,12 @@ jobs:
               # 递增修订号
               patch=$((patch + 1))
               new_version="${major}.${minor}.${patch}"
-        
-              echo "version=${new_version}" >> $GITHUB_OUTPUT
-          else
-              echo "version=${{github.event.inputs.version}}" >> $GITHUB_OUTPUT
           fi
+          
+          echo "版本升级: ${version_tag} => ${new_version}"
+          echo "version=${new_version}" >> $GITHUB_OUTPUT
+          echo "测试"
+          exit 1
 
       - name: 下载依赖
         run: |

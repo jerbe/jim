@@ -37,7 +37,7 @@ func main() {
 	listenPort := fmt.Sprintf(":%d", config.GlobConfig().Http.Port)
 
 	sigCh := make(chan os.Signal)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP, syscall.SIGIOT)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
 
 	httpSvr := &http.Server{Addr: listenPort, Handler: httpRouter.Handler()}
 	go func() {
