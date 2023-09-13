@@ -82,8 +82,8 @@ func AddUserRelation(relation *UserRelation, opts ...*SetOptions) (id int64, err
 
 	defer func() {
 		if err == nil && opt.UpdateCache() {
-			jcache.Set(GlobCtx, cacheKeyFormatUserRelationID(relation.ID), relation, jcache.DefaultExpirationDuration)
-			jcache.Set(GlobCtx, cacheKeyFormatUserRelationUserIDs(relation.UserAID, relation.UserBID), relation, jcache.DefaultExpirationDuration)
+			GlobCache.Set(GlobCtx, cacheKeyFormatUserRelationID(relation.ID), relation, jcache.DefaultExpirationDuration)
+			GlobCache.Set(GlobCtx, cacheKeyFormatUserRelationUserIDs(relation.UserAID, relation.UserBID), relation, jcache.DefaultExpirationDuration)
 		}
 	}()
 
@@ -171,12 +171,12 @@ func CreateUserRelationTx(relation *UserRelation) (id int64, err error) {
 		}
 
 		// 删除缓存
-		jcache.Del(GlobCtx, cacheKeyFormatUserRelationID(relation.ID))
-		jcache.Del(GlobCtx, cacheKeyFormatUserRelationUserIDs(relation.UserAID, relation.UserAID))
+		GlobCache.Del(GlobCtx, cacheKeyFormatUserRelationID(relation.ID))
+		GlobCache.Del(GlobCtx, cacheKeyFormatUserRelationUserIDs(relation.UserAID, relation.UserAID))
 
 		if invite != nil {
-			jcache.Del(GlobCtx, cacheKeyFormatUserRelationInviteID(invite.ID))
-			jcache.Del(GlobCtx, cacheKeyFormatUserRelationInviteUserIDs(invite.UserID, invite.TargetID))
+			GlobCache.Del(GlobCtx, cacheKeyFormatUserRelationInviteID(invite.ID))
+			GlobCache.Del(GlobCtx, cacheKeyFormatUserRelationInviteUserIDs(invite.UserID, invite.TargetID))
 		}
 	}()
 
@@ -213,10 +213,10 @@ func GetUserRelation(id int64, opts ...*GetOptions) (*UserRelation, error) {
 	opt := MergeGetOptions(opts)
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatUserRelationID(id)
-		exists, _ := jcache.Exists(GlobCtx, cacheKey)
-		if exists {
+		exists, _ := GlobCache.Exists(GlobCtx, cacheKey)
+		if exists > 0 {
 			relation := &UserRelation{}
-			err := jcache.CheckAndScan(GlobCtx, relation, cacheKey)
+			err := GlobCache.CheckAndScan(GlobCtx, relation, cacheKey)
 			if err == nil {
 				return relation, nil
 			}
@@ -236,7 +236,7 @@ func GetUserRelation(id int64, opts ...*GetOptions) (*UserRelation, error) {
 		if err == sql.ErrNoRows {
 			// 写入缓存,如果key不存在的话
 			var cacheKey = cacheKeyFormatUserRelationID(id)
-			if err := jcache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err != nil {
+			if err := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err != nil {
 				log.Error().Err(err).Str("cache_key", cacheKey).Msg("缓存写入失败")
 			}
 		}
@@ -244,8 +244,8 @@ func GetUserRelation(id int64, opts ...*GetOptions) (*UserRelation, error) {
 	}
 
 	if opt.UpdateCache() {
-		jcache.Set(GlobCtx, cacheKeyFormatUserRelationID(relation.ID), relation, jcache.DefaultExpirationDuration)
-		jcache.Set(GlobCtx, cacheKeyFormatUserRelationUserIDs(relation.UserAID, relation.UserBID), relation, jcache.DefaultExpirationDuration)
+		GlobCache.Set(GlobCtx, cacheKeyFormatUserRelationID(relation.ID), relation, jcache.DefaultExpirationDuration)
+		GlobCache.Set(GlobCtx, cacheKeyFormatUserRelationUserIDs(relation.UserAID, relation.UserBID), relation, jcache.DefaultExpirationDuration)
 	}
 
 	return relation, nil
@@ -256,10 +256,10 @@ func GetUserRelationByUsersID(userAID int64, userBID int64, opts ...*GetOptions)
 	opt := MergeGetOptions(opts)
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatUserRelationUserIDs(userAID, userBID)
-		exists, _ := jcache.Exists(GlobCtx, cacheKey)
-		if exists {
+		exists, _ := GlobCache.Exists(GlobCtx, cacheKey)
+		if exists > 0 {
 			relation := &UserRelation{}
-			err := jcache.CheckAndScan(GlobCtx, relation, cacheKey)
+			err := GlobCache.CheckAndScan(GlobCtx, relation, cacheKey)
 			if err == nil {
 				return relation, nil
 			}
@@ -282,7 +282,7 @@ func GetUserRelationByUsersID(userAID int64, userBID int64, opts ...*GetOptions)
 		if err == sql.ErrNoRows {
 			// 写入缓存,如果key不存在的话
 			var cacheKey = cacheKeyFormatUserRelationUserIDs(a, b)
-			if err := jcache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err != nil {
+			if err := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err != nil {
 				log.Error().Err(err).Str("cache_key", cacheKey).Msg("缓存写入失败")
 			}
 		}
@@ -291,8 +291,8 @@ func GetUserRelationByUsersID(userAID int64, userBID int64, opts ...*GetOptions)
 
 	if opt.UpdateCache() {
 		// 将关系数据写入到缓存中去
-		jcache.Set(GlobCtx, cacheKeyFormatUserRelationID(relation.ID), relation, jcache.DefaultExpirationDuration)
-		jcache.Set(GlobCtx, cacheKeyFormatUserRelationUserIDs(relation.UserAID, relation.UserBID), relation, jcache.DefaultExpirationDuration)
+		GlobCache.Set(GlobCtx, cacheKeyFormatUserRelationID(relation.ID), relation, jcache.DefaultExpirationDuration)
+		GlobCache.Set(GlobCtx, cacheKeyFormatUserRelationUserIDs(relation.UserAID, relation.UserBID), relation, jcache.DefaultExpirationDuration)
 
 	}
 	return relation, nil
@@ -427,17 +427,17 @@ func UpdateUserRelation(filter *UpdateUserRelationFilter, data *UpdateUserRelati
 		var got bool
 		if filter.ID > 0 {
 			got = true
-			err = jcache.CheckAndScan(GlobCtx, relation, cacheKeyFormatUserRelationID(filter.ID))
+			err = GlobCache.CheckAndScan(GlobCtx, relation, cacheKeyFormatUserRelationID(filter.ID))
 		}
 
 		if filter.UserAID > 0 && (!got || err != nil) {
 			got = true
-			err = jcache.CheckAndScan(GlobCtx, relation, cacheKeyFormatUserRelationUserIDs(filter.UserAID, filter.UserBID))
+			err = GlobCache.CheckAndScan(GlobCtx, relation, cacheKeyFormatUserRelationUserIDs(filter.UserAID, filter.UserBID))
 		}
 
 		if got && err == nil {
-			jcache.Del(GlobCtx, cacheKeyFormatUserRelationID(relation.ID))
-			jcache.Del(GlobCtx, cacheKeyFormatUserRelationUserIDs(relation.UserAID, relation.UserBID))
+			GlobCache.Del(GlobCtx, cacheKeyFormatUserRelationID(relation.ID))
+			GlobCache.Del(GlobCtx, cacheKeyFormatUserRelationUserIDs(relation.UserAID, relation.UserBID))
 		}
 	}
 	return cnt, nil
@@ -472,12 +472,12 @@ func UpdateUserRelationTx(filter *UpdateUserRelationFilter, data *UpdateUserRela
 
 		// 删除相关缓存
 		if relation != nil {
-			jcache.Del(GlobCtx, cacheKeyFormatUserRelationID(relation.ID))
-			jcache.Del(GlobCtx, cacheKeyFormatUserRelationUserIDs(relation.UserAID, relation.UserBID))
+			GlobCache.Del(GlobCtx, cacheKeyFormatUserRelationID(relation.ID))
+			GlobCache.Del(GlobCtx, cacheKeyFormatUserRelationUserIDs(relation.UserAID, relation.UserBID))
 		}
 		if invite != nil {
-			jcache.Del(GlobCtx, cacheKeyFormatUserRelationInviteID(invite.ID))
-			jcache.Del(GlobCtx, cacheKeyFormatUserRelationInviteUserIDs(invite.UserID, invite.TargetID))
+			GlobCache.Del(GlobCtx, cacheKeyFormatUserRelationInviteID(invite.ID))
+			GlobCache.Del(GlobCtx, cacheKeyFormatUserRelationInviteUserIDs(invite.UserID, invite.TargetID))
 		}
 	}()
 

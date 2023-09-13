@@ -53,7 +53,7 @@ func GetUser(id int64, opts ...*GetOptions) (*User, error) {
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatUserID(id)
 		var user = new(User)
-		err := jcache.CheckAndScan(GlobCtx, user, cacheKey)
+		err := GlobCache.CheckAndScan(GlobCtx, user, cacheKey)
 		if err == nil {
 			return user, nil
 		}
@@ -73,7 +73,7 @@ func GetUser(id int64, opts ...*GetOptions) (*User, error) {
 		if err == sql.ErrNoRows {
 			// 写入缓存,如果key不存在的话
 			var cacheKey = cacheKeyFormatUserID(id)
-			if err1 := jcache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err1 != nil {
+			if err1 := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err1 != nil {
 				log.Error().Err(err1).Str("cache_key", cacheKey).Msg("缓存写入失败")
 			}
 
@@ -84,8 +84,8 @@ func GetUser(id int64, opts ...*GetOptions) (*User, error) {
 
 	if opt.UpdateCache() {
 		// 将数据写入到缓存
-		jcache.Set(GlobCtx, cacheKeyFormatUserID(user.ID), user, jcache.DefaultExpirationDuration)
-		jcache.Set(GlobCtx, cacheKeyFormatUsername(user.Username), user, jcache.DefaultExpirationDuration)
+		GlobCache.Set(GlobCtx, cacheKeyFormatUserID(user.ID), user, jcache.DefaultExpirationDuration)
+		GlobCache.Set(GlobCtx, cacheKeyFormatUsername(user.Username), user, jcache.DefaultExpirationDuration)
 	}
 
 	return user, nil
@@ -96,10 +96,10 @@ func GetUserByUsername(username string, opts ...*GetOptions) (*User, error) {
 	opt := MergeGetOptions(opts)
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatUsername(username)
-		exits, _ := jcache.Exists(GlobCtx, cacheKey)
-		if exits {
+		exits, _ := GlobCache.Exists(GlobCtx, cacheKey)
+		if exits > 0 {
 			user := new(User)
-			err := jcache.CheckAndScan(GlobCtx, user, cacheKey)
+			err := GlobCache.CheckAndScan(GlobCtx, user, cacheKey)
 			if err == nil {
 				return user, nil
 			}
@@ -119,7 +119,7 @@ func GetUserByUsername(username string, opts ...*GetOptions) (*User, error) {
 		if err == sql.ErrNoRows {
 			// 写入缓存,如果key不存在的话
 			cacheKey := cacheKeyFormatUsername(username)
-			if err1 := jcache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err1 != nil {
+			if err1 := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err1 != nil {
 				log.Error().Err(err1).Str("cache_key", cacheKey).Msg("缓存写入失败")
 			}
 			return nil, errors.Wrap(err)
@@ -130,8 +130,8 @@ func GetUserByUsername(username string, opts ...*GetOptions) (*User, error) {
 	// 将数据写入到缓存
 	if opt.UpdateCache() {
 		// 将数据写入到缓存
-		jcache.Set(GlobCtx, cacheKeyFormatUserID(user.ID), user, jcache.DefaultExpirationDuration)
-		jcache.Set(GlobCtx, cacheKeyFormatUsername(user.Username), user, jcache.DefaultExpirationDuration)
+		GlobCache.Set(GlobCtx, cacheKeyFormatUserID(user.ID), user, jcache.DefaultExpirationDuration)
+		GlobCache.Set(GlobCtx, cacheKeyFormatUsername(user.Username), user, jcache.DefaultExpirationDuration)
 	}
 
 	return user, nil
@@ -159,7 +159,7 @@ func GetUsers(ids []int64, opts ...*GetOptions) ([]*User, error) {
 		}
 
 		var cacheUsers []*User
-		err = jcache.MGetAndScan(GlobCtx, &cacheUsers, cacheKeys...)
+		err = GlobCache.MGetAndScan(GlobCtx, &cacheUsers, cacheKeys...)
 		if err == nil && len(cacheUsers) == len(uqIds) {
 			return cacheUsers, nil
 		}
@@ -202,8 +202,8 @@ func GetUsers(ids []int64, opts ...*GetOptions) ([]*User, error) {
 		for i := 0; i < len(dbUsers); i++ {
 			// 将数据写入到缓存
 			u := dbUsers[i]
-			jcache.Set(GlobCtx, cacheKeyFormatUserID(u.ID), u, jcache.RandomExpirationDuration())
-			jcache.Set(GlobCtx, cacheKeyFormatUsername(u.Username), u, jcache.RandomExpirationDuration())
+			GlobCache.Set(GlobCtx, cacheKeyFormatUserID(u.ID), u, jcache.RandomExpirationDuration())
+			GlobCache.Set(GlobCtx, cacheKeyFormatUsername(u.Username), u, jcache.RandomExpirationDuration())
 		}
 	}
 	users = append(users, dbUsers...)
@@ -323,8 +323,8 @@ func AddUser(user *User, opts ...*SetOptions) error {
 
 	if opt.UpdateCache() {
 		// 将数据写入到缓存
-		jcache.Set(GlobCtx, cacheKeyFormatUserID(user.ID), user, jcache.DefaultExpirationDuration)
-		jcache.Set(GlobCtx, cacheKeyFormatUsername(user.Username), user, jcache.DefaultExpirationDuration)
+		GlobCache.Set(GlobCtx, cacheKeyFormatUserID(user.ID), user, jcache.DefaultExpirationDuration)
+		GlobCache.Set(GlobCtx, cacheKeyFormatUsername(user.Username), user, jcache.DefaultExpirationDuration)
 	}
 
 	return nil

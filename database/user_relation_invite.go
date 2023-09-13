@@ -103,8 +103,8 @@ func AddUserRelationInvite(invite *UserRelationInvite, opts ...*SetOptions) erro
 	invite.ID = id
 
 	if opt.UpdateCache() {
-		jcache.Set(GlobCtx, cacheKeyFormatUserRelationInviteID(invite.ID), invite, jcache.DefaultExpirationDuration)
-		jcache.Set(GlobCtx, cacheKeyFormatUserRelationInviteUserIDs(invite.UserID, invite.TargetID), invite, jcache.DefaultExpirationDuration)
+		GlobCache.Set(GlobCtx, cacheKeyFormatUserRelationInviteID(invite.ID), invite, jcache.DefaultExpirationDuration)
+		GlobCache.Set(GlobCtx, cacheKeyFormatUserRelationInviteUserIDs(invite.UserID, invite.TargetID), invite, jcache.DefaultExpirationDuration)
 	}
 	return nil
 }
@@ -114,10 +114,10 @@ func GetUserRelationInvite(id int64, opts ...*GetOptions) (*UserRelationInvite, 
 	opt := MergeGetOptions(opts)
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatUserRelationInviteID(id)
-		exits, err := jcache.Exists(GlobCtx, cacheKey)
-		if exits {
+		exits, err := GlobCache.Exists(GlobCtx, cacheKey)
+		if exits > 0 {
 			invite := &UserRelationInvite{}
-			err = jcache.CheckAndScan(GlobCtx, invite, cacheKey)
+			err = GlobCache.CheckAndScan(GlobCtx, invite, cacheKey)
 			if err == nil {
 				return invite, nil
 			}
@@ -138,7 +138,7 @@ func GetUserRelationInvite(id int64, opts ...*GetOptions) (*UserRelationInvite, 
 		if errors.Is(err, sql.ErrNoRows) {
 			// 写入缓存,如果key不存在的话
 			var cacheKey = cacheKeyFormatUserRelationInviteID(id)
-			if err := jcache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err != nil {
+			if err := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err != nil {
 				log.Error().Err(err).Str("key", cacheKey).Msg("写入缓存失败")
 			}
 		}
@@ -146,8 +146,8 @@ func GetUserRelationInvite(id int64, opts ...*GetOptions) (*UserRelationInvite, 
 	}
 
 	if opt.UpdateCache() {
-		jcache.Set(GlobCtx, cacheKeyFormatUserRelationInviteID(id), invite, jcache.DefaultExpirationDuration)
-		jcache.Set(GlobCtx, cacheKeyFormatUserRelationInviteUserIDs(invite.UserID, invite.TargetID), invite, jcache.DefaultExpirationDuration)
+		GlobCache.Set(GlobCtx, cacheKeyFormatUserRelationInviteID(id), invite, jcache.DefaultExpirationDuration)
+		GlobCache.Set(GlobCtx, cacheKeyFormatUserRelationInviteUserIDs(invite.UserID, invite.TargetID), invite, jcache.DefaultExpirationDuration)
 	}
 
 	return invite, nil
@@ -158,10 +158,10 @@ func GetLastUserRelationInvite(userID, targetID int64, opts ...*GetOptions) (*Us
 	opt := MergeGetOptions(opts)
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatUserRelationInviteUserIDs(userID, targetID)
-		exists, _ := jcache.Exists(GlobCtx, cacheKey)
-		if exists {
+		exists, _ := GlobCache.Exists(GlobCtx, cacheKey)
+		if exists > 0 {
 			invite := &UserRelationInvite{}
-			err := jcache.CheckAndScan(GlobCtx, invite, cacheKey)
+			err := GlobCache.CheckAndScan(GlobCtx, invite, cacheKey)
 			if err == nil {
 				return invite, nil
 			}
@@ -180,7 +180,7 @@ func GetLastUserRelationInvite(userID, targetID int64, opts ...*GetOptions) (*Us
 		if errors.Is(err, sql.ErrNoRows) {
 			// 写入缓存,如果key不存在的话
 			var cacheKey = cacheKeyFormatUserRelationInviteUserIDs(userID, targetID)
-			if err := jcache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err != nil {
+			if err := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err != nil {
 				log.Warn().Err(err).Str("key", cacheKey).Str("err_format", fmt.Sprintf("%+v", err)).Msg("写入缓存失败")
 			}
 		}
@@ -188,8 +188,8 @@ func GetLastUserRelationInvite(userID, targetID int64, opts ...*GetOptions) (*Us
 	}
 
 	if opt.UpdateCache() {
-		jcache.Set(GlobCtx, cacheKeyFormatUserRelationInviteID(invite.ID), invite, jcache.DefaultExpirationDuration)
-		jcache.Set(GlobCtx, cacheKeyFormatUserRelationInviteUserIDs(invite.UserID, invite.TargetID), invite, jcache.DefaultExpirationDuration)
+		GlobCache.Set(GlobCtx, cacheKeyFormatUserRelationInviteID(invite.ID), invite, jcache.DefaultExpirationDuration)
+		GlobCache.Set(GlobCtx, cacheKeyFormatUserRelationInviteUserIDs(invite.UserID, invite.TargetID), invite, jcache.DefaultExpirationDuration)
 	}
 
 	return invite, nil
@@ -283,17 +283,17 @@ func UpdateUserRelationInvite(filter *UpdateUserRelationInviteFilter, data *Upda
 		usersKey := cacheKeyFormatUserRelationInviteUserIDs(filter.UserID, filter.TargetID)
 		if filter.ID > 0 {
 			got = true
-			err = jcache.CheckAndScan(GlobCtx, invite, idKey)
+			err = GlobCache.CheckAndScan(GlobCtx, invite, idKey)
 		}
 
 		if filter.UserID > 0 && (!got || err != nil) {
 			got = true
-			err = jcache.CheckAndScan(GlobCtx, invite, usersKey)
+			err = GlobCache.CheckAndScan(GlobCtx, invite, usersKey)
 		}
 
 		if got && err == nil {
-			jcache.Del(GlobCtx, idKey)
-			jcache.Del(GlobCtx, usersKey)
+			GlobCache.Del(GlobCtx, idKey)
+			GlobCache.Del(GlobCtx, usersKey)
 		}
 	}
 

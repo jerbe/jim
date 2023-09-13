@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/jerbe/jcache"
 	"github.com/jerbe/jim/config"
 	"github.com/jerbe/jim/database"
 	"github.com/jerbe/jim/errors"
@@ -83,21 +82,4 @@ func init() {
 	if _, err = database.Init(cfg); err != nil {
 		log.Fatal().Err(err).Msg("数据模块('database')初始化失败")
 	}
-	log.Info().Msg("数据模块('database')初始完成")
-	jcacheCfg := &jcache.Config{
-		Redis: &jcache.RedisConfig{
-			Mode:       cfg.Redis.Mode,
-			MasterName: cfg.Redis.MasterName,
-			Addrs:      cfg.Redis.Addrs,
-			Database:   cfg.Redis.Database,
-			Username:   cfg.Redis.Username,
-			Password:   cfg.Redis.Password,
-		},
-	}
-	err = jcache.Init(jcacheCfg)
-	if err != nil {
-		log.Fatal().Err(err).Msg("缓存模块('cache')初始化失败")
-	}
-	log.Info().Msg("缓存模块('cache')初始完成")
-
 }

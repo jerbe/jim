@@ -8,6 +8,9 @@ import (
 	"github.com/jerbe/jim/config"
 	"github.com/jerbe/jim/errors"
 
+	"github.com/jerbe/jcache"
+	"github.com/jerbe/jcache/driver"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/redis/go-redis/v9"
@@ -77,6 +80,8 @@ var (
 
 	GlobDB *Database
 
+	GlobCache *jcache.Client
+
 	initialized bool
 )
 
@@ -86,6 +91,21 @@ func Init(cfg config.Config) (db *Database, err error) {
 	}
 
 	CacheKeyPrefix = cfg.Main.ServerName
+
+	// 初始化缓存
+	c := driver.RedisConfig{
+		Mode:       cfg.Redis.Mode,
+		MasterName: cfg.Redis.MasterName,
+		Addrs:      cfg.Redis.Addrs,
+		Database:   cfg.Redis.Database,
+		Username:   cfg.Redis.Username,
+		Password:   cfg.Redis.Password,
+	}
+	cache := jcache.NewClient(
+		driver.NewMemory(),
+		driver.NewRedis(driver.RedisOptions().Config(&c)))
+
+	GlobCache = cache
 
 	// 初始化MYSQL
 	mysqlCfg := cfg.MySQL

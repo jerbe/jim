@@ -275,13 +275,13 @@ func AddChatMessage(msg *ChatMessage) error {
 	// 将聊天数据推送到缓存定长队列中去
 	// @TODO 暂时这样push,但是这样处理不准确,需要做优化. 因为每个响应的是时长不一样,可能导致顺序不是正确的,甚至是断续的. 如 [1,3,2,4,7,6,5,8,9,11,10,19]
 	cacheKey := cacheKeyFormatLastMessageList(msg.RoomID, msg.SessionType)
-	err = jcache.Push(GlobCtx, cacheKey, msg)
+	err = GlobCache.Push(GlobCtx, cacheKey, msg)
 	if err != nil && err.Error() == "WRONGTYPE Operation against a key holding the wrong kind of value" {
-		jcache.Del(GlobCtx, cacheKey)
+		GlobCache.Del(GlobCtx, cacheKey)
 	}
 
 	if err == nil {
-		jcache.Expire(GlobCtx, cacheKey, jcache.RandomExpirationDuration())
+		GlobCache.Expire(GlobCtx, cacheKey, jcache.RandomExpirationDuration())
 	}
 
 	return nil
@@ -340,13 +340,13 @@ func AddChatMessageTx(msg *ChatMessage) error {
 
 			// 将聊天数据推送到缓存定长队列中去
 			cacheKey := cacheKeyFormatLastMessageList(msg.RoomID, msg.SessionType)
-			err = jcache.Push(GlobCtx, cacheKey, msg)
+			err = GlobCache.Push(GlobCtx, cacheKey, msg)
 			if err != nil {
-				jcache.Del(GlobCtx, cacheKey)
+				GlobCache.Del(GlobCtx, cacheKey)
 				log.Error().Err(err).Msgf("推送消息到缓存列表失败:\n %+v", err)
 			}
 			if err == nil {
-				jcache.Expire(GlobCtx, cacheKey, jcache.RandomExpirationDuration())
+				GlobCache.Expire(GlobCtx, cacheKey, jcache.RandomExpirationDuration())
 			}
 
 			return nil, nil
@@ -494,10 +494,10 @@ func GetLastChatMessageList(roomID string, sessionType int, opts ...*GetOptions)
 
 	// 如果有使用缓存,则从缓存中获取
 	if opt.UseCache() {
-		exists, _ := jcache.Exists(GlobCtx, cacheKey)
-		if exists {
+		exists, _ := GlobCache.Exists(GlobCtx, cacheKey)
+		if exists > 0 {
 			var messages []*ChatMessage
-			err := jcache.RangAndScan(GlobCtx, &messages, cacheKey, defaultLastLimit)
+			err := GlobCache.RangAndScan(GlobCtx, &messages, cacheKey, 0, defaultLastLimit-1)
 			if err == nil {
 				return messages, nil
 			}
@@ -521,7 +521,7 @@ func GetLastChatMessageList(roomID string, sessionType int, opts ...*GetOptions)
 			// @todo 设置缓存为找不到记录
 
 			cacheKey := cacheKeyFormatLastMessageList(roomID, sessionType)
-			if err := jcache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err != nil {
+			if err := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err != nil {
 				log.Error().Err(err).Str("cache_key", cacheKey).Msg("缓存写入失败")
 			}
 
@@ -543,16 +543,16 @@ func GetLastChatMessageList(roomID string, sessionType int, opts ...*GetOptions)
 		pushData = append(pushData, msg)
 	}
 
-	err = jcache.Push(GlobCtx, cacheKey, pushData...)
+	err = GlobCache.Push(GlobCtx, cacheKey, pushData...)
 	if err != nil && err.Error() == "WRONGTYPE Operation against a key holding the wrong kind of value" {
-		jcache.Del(GlobCtx, cacheKey)
-		err = jcache.Push(GlobCtx, cacheKey, pushData...)
+		GlobCache.Del(GlobCtx, cacheKey)
+		err = GlobCache.Push(GlobCtx, cacheKey, pushData...)
 		if err != nil {
 			log.Warn().Err(err).Msg("缓存插入聊天消息失败")
 		}
 	}
 	if err == nil {
-		jcache.Expire(GlobCtx, cacheKey, jcache.RandomExpirationDuration())
+		GlobCache.Expire(GlobCtx, cacheKey, jcache.RandomExpirationDuration())
 	}
 
 	// 设置缓存
