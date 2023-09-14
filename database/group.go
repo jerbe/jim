@@ -4,14 +4,17 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/jerbe/jcache"
-	"github.com/jerbe/jim/errors"
-	"github.com/jerbe/jim/log"
-	"github.com/jerbe/jim/utils"
-	"github.com/jmoiron/sqlx"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jerbe/jim/errors"
+	"github.com/jerbe/jim/log"
+	"github.com/jerbe/jim/utils"
+
+	"github.com/jerbe/jcache"
+
+	"github.com/jmoiron/sqlx"
 )
 
 /**

@@ -1,28 +1,60 @@
 package errors
 
 import (
-	"fmt"
 	"testing"
 )
 
 /**
   @author : Jerbe - The porter from Earth
-  @time : 2023/8/20 23:05
+  @time : 2023/9/14 15:37
   @describe :
 */
 
-var T = New("this is test")
+func TestError(t *testing.T) {
+	var err error
+	err = NewWithCaller("Hello world")
+	err = Wrap(err)
+	err = Wrap(err)
 
-func TestWrap(t *testing.T) {
-	e := T.Wrap(New("aa"))
-	e = e.(*Error).Wrap(e)
-	e = Wrap(e)
-	e = Wrap(e)
-	e = Wrap(e)
+	t.Logf("%+v", err)
+}
 
-	e2 := New("c")
-	e = e.(*Error).Wrap(e2)
-	e = Wrap(e)
-	e = Wrap(e)
-	fmt.Printf("%+v", e)
+func TestIsEmptyRecord(t *testing.T) {
+	type args struct {
+		err error
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsEmptyRecord(tt.args.err); got != tt.want {
+				t.Errorf("IsEmptyRecord() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsNoRecord(t *testing.T) {
+	type args struct {
+		err error
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsNoRecord(tt.args.err); got != tt.want {
+				t.Errorf("IsNoRecord() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

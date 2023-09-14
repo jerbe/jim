@@ -3,17 +3,17 @@ package handler
 import (
 	"context"
 	"fmt"
-	"github.com/mojocn/base64Captcha"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/jerbe/jim/config"
 	"github.com/jerbe/jim/database"
 	"github.com/jerbe/jim/errors"
 	"github.com/jerbe/jim/log"
 	"github.com/jerbe/jim/utils"
 
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/mojocn/base64Captcha"
 )
 
 /**

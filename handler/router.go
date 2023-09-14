@@ -1,8 +1,9 @@
 package handler
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/jerbe/jim/pubsub"
+
+	"github.com/gin-gonic/gin"
 )
 
 /**

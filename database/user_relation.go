@@ -7,10 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jerbe/jcache"
 	"github.com/jerbe/jim/errors"
 	"github.com/jerbe/jim/log"
 	"github.com/jerbe/jim/utils"
+
+	"github.com/jerbe/jcache"
+
 	"github.com/jmoiron/sqlx"
 )
 
@@ -523,7 +525,7 @@ func UpdateUserRelationTx(filter *UpdateUserRelationFilter, data *UpdateUserRela
 			}
 
 			_, err = UpdateUserRelationInvite(updateFilter, updateData, setOptions)
-			if err != nil && !errors.InIs(err, errors.NoRecords, errors.NotChange) {
+			if err != nil && !errors.IsIn(err, errors.NoRecords, errors.NotChange) {
 				return 0, errors.Wrap(err)
 			}
 		}

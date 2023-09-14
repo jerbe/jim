@@ -7,8 +7,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/gorilla/websocket"
 	"github.com/jerbe/jim/log"
+
+	"github.com/gorilla/websocket"
 )
 
 /**

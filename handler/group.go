@@ -2,12 +2,14 @@ package handler
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
+	"time"
+
 	"github.com/jerbe/jim/database"
 	"github.com/jerbe/jim/errors"
 	"github.com/jerbe/jim/log"
 	"github.com/jerbe/jim/utils"
-	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 /**

@@ -3,12 +3,14 @@ package handler
 import (
 	"context"
 	"fmt"
-	"github.com/jerbe/jim/config"
-	"github.com/jerbe/jim/database"
-	"github.com/mojocn/base64Captcha"
-	"github.com/redis/go-redis/v9"
 	"image/color"
 	"time"
+
+	"github.com/jerbe/jim/config"
+	"github.com/jerbe/jim/database"
+
+	"github.com/mojocn/base64Captcha"
+	"github.com/redis/go-redis/v9"
 )
 
 /**

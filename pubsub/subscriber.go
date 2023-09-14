@@ -3,7 +3,9 @@ package pubsub
 import (
 	"context"
 	"fmt"
+
 	"github.com/jerbe/jim/log"
+
 	"github.com/redis/go-redis/v9"
 )
 

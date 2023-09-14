@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/jerbe/jim/errors"
 	"github.com/jerbe/jim/log"
+
 	"github.com/redis/go-redis/v9"
 )
 

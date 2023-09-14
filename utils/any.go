@@ -1,8 +1,9 @@
 package utils
 
 import (
-	"github.com/jerbe/jim/errors"
 	"reflect"
+
+	"github.com/jerbe/jim/errors"
 )
 
 /**

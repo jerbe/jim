@@ -4,14 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/jerbe/jim/errors"
-	"github.com/jerbe/jim/pubsub"
-	"github.com/jerbe/jim/websocket"
 	"time"
 
 	"github.com/jerbe/jim/database"
+	"github.com/jerbe/jim/errors"
 	"github.com/jerbe/jim/log"
+	"github.com/jerbe/jim/pubsub"
 	"github.com/jerbe/jim/utils"
+	"github.com/jerbe/jim/websocket"
 
 	"github.com/gin-gonic/gin"
 )

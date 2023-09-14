@@ -3,15 +3,17 @@ package handler
 import (
 	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
+	"strconv"
+	"time"
+
 	"github.com/jerbe/jim/database"
 	"github.com/jerbe/jim/errors"
 	"github.com/jerbe/jim/log"
 	"github.com/jerbe/jim/pubsub"
 	"github.com/jerbe/jim/utils"
 	"github.com/jerbe/jim/websocket"
-	"strconv"
-	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 /**

@@ -1,11 +1,13 @@
 package pubsub
 
 import (
-	"github.com/jerbe/jim/config"
-	"github.com/jerbe/jim/errors"
-	"github.com/redis/go-redis/v9"
 	"strings"
 	"time"
+
+	"github.com/jerbe/jim/config"
+	"github.com/jerbe/jim/errors"
+
+	"github.com/redis/go-redis/v9"
 )
 
 /**
