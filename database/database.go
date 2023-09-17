@@ -93,7 +93,7 @@ func Init(cfg config.Config) (db *Database, err error) {
 	CacheKeyPrefix = cfg.Main.ServerName
 
 	// 初始化缓存
-	c := driver.RedisConfig{
+	c := &driver.RedisConfig{
 		Mode:       cfg.Redis.Mode,
 		MasterName: cfg.Redis.MasterName,
 		Addrs:      cfg.Redis.Addrs,
@@ -103,7 +103,7 @@ func Init(cfg config.Config) (db *Database, err error) {
 	}
 	cache := jcache.NewClient(
 		driver.NewMemory(),
-		driver.NewRedis(driver.RedisOptions().Config(&c)))
+		driver.NewRedis(driver.NewRedisOptionsWithConfig(c)))
 
 	GlobCache = cache
 
