@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"github.com/jerbe/jcache"
 	"github.com/jerbe/jim/config"
 	"github.com/jerbe/jim/database"
 	"github.com/jerbe/jim/pubsub"
@@ -37,17 +36,6 @@ func TestMain(t *testing.M) {
 		log.Fatalln("初始化数据模块('database')失败")
 	}
 
-	jcacheCfg := jcache.Config{
-		Redis: &jcache.RedisConfig{
-			Mode:       cfg.Redis.Mode,
-			MasterName: cfg.Redis.MasterName,
-			Addrs:      cfg.Redis.Addrs,
-			Database:   cfg.Redis.Database,
-			Username:   cfg.Redis.Username,
-			Password:   cfg.Redis.Password,
-		},
-	}
-	err = jcache.Init(&jcacheCfg)
 	if err != nil {
 		log.Fatalln("初始化缓存模块('cache')失败")
 	}

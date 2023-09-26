@@ -12,7 +12,7 @@ import (
 	"github.com/jerbe/jim/log"
 	"github.com/jerbe/jim/utils"
 
-	"github.com/jerbe/jcache"
+	"github.com/jerbe/jcache/v2"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -102,14 +102,13 @@ func GetGroup(id int64, opts ...*GetOptions) (*Group, error) {
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatGroupID(id)
 		group := new(Group)
-		err := GlobCache.CheckAndScan(GlobCtx, group, cacheKey)
-		if err == nil {
-			return group, nil
+		value := GlobCache.Get(GlobCtx, cacheKey)
+		if value.Err() == nil && value.Val() != "" {
+			err := value.Scan(group)
+			return group, err
 		}
-
-		// 如果是空记录,则直接返回找不到
-		if errors.IsEmptyRecord(err) {
-			return nil, errors.Wrap(err)
+		if value.Err() == nil && value.Val() == "" {
+			return nil, errors.NoRecords
 		}
 	}
 
@@ -121,7 +120,7 @@ func GetGroup(id int64, opts ...*GetOptions) (*Group, error) {
 		if errors.IsNoRecord(err) {
 			// 写入缓存,如果key不存在的话
 			var cacheKey = cacheKeyFormatGroupID(id)
-			if e := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); e != nil {
+			if e := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration).Err(); e != nil {
 				log.Error().Err(e).Str("err_format", fmt.Sprintf("%+v", e)).Str("cache_key", cacheKey).Msg("缓存写入失败")
 			}
 		}
@@ -303,9 +302,9 @@ func GetGroupMemberCount(groupID int64, opts ...*GetOptions) (int64, error) {
 	opt := MergeGetOptions(opts)
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatGroupMembers(groupID)
-		exists, _ := GlobCache.Exists(GlobCtx, cacheKey)
+		exists := GlobCache.Exists(GlobCtx, cacheKey).Val()
 		if exists > 0 {
-			cnt, err := GlobCache.HLen(GlobCtx, cacheKey)
+			cnt, err := GlobCache.HLen(GlobCtx, cacheKey).Result()
 			if err == nil {
 				return cnt, nil
 			}
@@ -327,7 +326,7 @@ func GetGroupMemberIDs(groupID int64, opts ...*GetOptions) ([]int64, error) {
 	var userIDs []int64
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatGroupMembers(groupID)
-		exists, _ := GlobCache.Exists(GlobCtx, cacheKey)
+		exists := GlobCache.Exists(GlobCtx, cacheKey).Val()
 		if exists > 0 {
 			err := GlobCache.HKeysAndScan(GlobCtx, userIDs, cacheKey)
 			if err == nil {
@@ -362,9 +361,9 @@ func GetGroupMemberIDsString(groupID int64, opts ...*GetOptions) ([]string, erro
 	var userIDs []string
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatGroupMembers(groupID)
-		exists, _ := GlobCache.Exists(GlobCtx, cacheKey)
+		exists := GlobCache.Exists(GlobCtx, cacheKey).Val()
 		if exists > 0 {
-			keys, err := GlobCache.HKeys(GlobCtx, cacheKey)
+			keys, err := GlobCache.HKeys(GlobCtx, cacheKey).Result()
 			if err == nil {
 				return keys, nil
 			}
@@ -449,7 +448,7 @@ func GetGroupAllMembers(groupID int64, opts ...*GetOptions) ([]*GroupMember, err
 	gms := make([]*GroupMember, 0)
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatGroupMembers(groupID)
-		exists, _ := GlobCache.Exists(GlobCtx, cacheKey)
+		exists := GlobCache.Exists(GlobCtx, cacheKey).Val()
 		if exists > 0 {
 			err := GlobCache.HValsAndScan(GlobCtx, gms, cacheKeyFormatGroupMembers(groupID))
 			if err == nil {
@@ -491,7 +490,7 @@ func GetGroupMembers(groupID int64, memberIDs []int64, opts ...*GetOptions) ([]*
 	gms := make([]*GroupMember, 0)
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatGroupMembers(groupID)
-		exists, _ := GlobCache.Exists(GlobCtx, cacheKey)
+		exists := GlobCache.Exists(GlobCtx, cacheKey).Val()
 		if exists > 0 {
 			var memberKeys = make([]string, len(memberIDs))
 			for i := 0; i < len(memberIDs); i++ {
@@ -542,7 +541,7 @@ func GetGroupMember(groupID, memberID int64, opts ...*GetOptions) (*GroupMember,
 	member := new(GroupMember)
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatGroupMembers(groupID)
-		exists, _ := GlobCache.Exists(GlobCtx, cacheKey)
+		exists := GlobCache.Exists(GlobCtx, cacheKey).Val()
 		if exists > 0 {
 			err := GlobCache.HGetAndScan(GlobCtx, member, cacheKeyFormatGroupMembers(groupID), fmt.Sprintf("%d", memberID))
 			if err == nil {
@@ -561,7 +560,7 @@ func GetGroupMember(groupID, memberID int64, opts ...*GetOptions) (*GroupMember,
 	if opt.UpdateCache() {
 		cacheKey := cacheKeyFormatGroupMembers(groupID)
 
-		if exists, _ := GlobCache.Exists(GlobCtx, cacheKey); exists > 0 {
+		if exists := GlobCache.Exists(GlobCtx, cacheKey).Val(); exists > 0 {
 			GlobCache.HSet(GlobCtx, cacheKey, fmt.Sprintf("%d", memberID), member)
 		}
 	}

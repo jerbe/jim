@@ -11,7 +11,7 @@ import (
 	"github.com/jerbe/jim/log"
 	"github.com/jerbe/jim/utils"
 
-	"github.com/jerbe/jcache"
+	"github.com/jerbe/jcache/v2"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -117,16 +117,16 @@ func GetUserRelationInvite(id int64, opts ...*GetOptions) (*UserRelationInvite, 
 	opt := MergeGetOptions(opts)
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatUserRelationInviteID(id)
-		exits, err := GlobCache.Exists(GlobCtx, cacheKey)
+		exits := GlobCache.Exists(GlobCtx, cacheKey).Val()
 		if exits > 0 {
 			invite := &UserRelationInvite{}
-			err = GlobCache.CheckAndScan(GlobCtx, invite, cacheKey)
-			if err == nil {
-				return invite, nil
+			value := GlobCache.Get(GlobCtx, cacheKey)
+			if value.Err() == nil && value.Val() != "" {
+				err := value.Scan(invite)
+				return invite, err
 			}
-
-			if errors.IsEmptyRecord(err) {
-				return nil, errors.Wrap(err)
+			if value.Err() == nil && value.Val() == "" {
+				return nil, errors.NoRecords
 			}
 		}
 
@@ -141,7 +141,7 @@ func GetUserRelationInvite(id int64, opts ...*GetOptions) (*UserRelationInvite, 
 		if errors.Is(err, sql.ErrNoRows) {
 			// 写入缓存,如果key不存在的话
 			var cacheKey = cacheKeyFormatUserRelationInviteID(id)
-			if err := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err != nil {
+			if err := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration).Err(); err != nil {
 				log.Error().Err(err).Str("key", cacheKey).Msg("写入缓存失败")
 			}
 		}
@@ -161,15 +161,16 @@ func GetLastUserRelationInvite(userID, targetID int64, opts ...*GetOptions) (*Us
 	opt := MergeGetOptions(opts)
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatUserRelationInviteUserIDs(userID, targetID)
-		exists, _ := GlobCache.Exists(GlobCtx, cacheKey)
+		exists := GlobCache.Exists(GlobCtx, cacheKey).Val()
 		if exists > 0 {
 			invite := &UserRelationInvite{}
-			err := GlobCache.CheckAndScan(GlobCtx, invite, cacheKey)
-			if err == nil {
-				return invite, nil
+			value := GlobCache.Get(GlobCtx, cacheKey)
+			if value.Err() == nil && value.Val() != "" {
+				err := value.Scan(invite)
+				return invite, err
 			}
-			if errors.IsEmptyRecord(err) {
-				return nil, errors.Wrap(err)
+			if value.Err() == nil && value.Val() == "" {
+				return nil, errors.NoRecords
 			}
 		}
 
@@ -183,7 +184,7 @@ func GetLastUserRelationInvite(userID, targetID int64, opts ...*GetOptions) (*Us
 		if errors.Is(err, sql.ErrNoRows) {
 			// 写入缓存,如果key不存在的话
 			var cacheKey = cacheKeyFormatUserRelationInviteUserIDs(userID, targetID)
-			if err := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err != nil {
+			if err := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration).Err(); err != nil {
 				log.Warn().Err(err).Str("key", cacheKey).Str("err_format", fmt.Sprintf("%+v", err)).Msg("写入缓存失败")
 			}
 		}
@@ -279,19 +280,26 @@ func UpdateUserRelationInvite(filter *UpdateUserRelationInviteFilter, data *Upda
 	}
 
 	if opt.UpdateCache() {
-		invite := new(UserRelationInvite)
 		var got bool
 
 		idKey := cacheKeyFormatUserRelationInviteID(filter.ID)
 		usersKey := cacheKeyFormatUserRelationInviteUserIDs(filter.UserID, filter.TargetID)
 		if filter.ID > 0 {
 			got = true
-			err = GlobCache.CheckAndScan(GlobCtx, invite, idKey)
+			val := GlobCache.Get(GlobCtx, idKey)
+			err = val.Err()
+			if err == nil && val.Val() == "" {
+				err = errors.NoRecords
+			}
 		}
 
 		if filter.UserID > 0 && (!got || err != nil) {
 			got = true
-			err = GlobCache.CheckAndScan(GlobCtx, invite, usersKey)
+			val := GlobCache.Get(GlobCtx, usersKey)
+			err = val.Err()
+			if err == nil && val.Val() == "" {
+				err = errors.NoRecords
+			}
 		}
 
 		if got && err == nil {

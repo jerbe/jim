@@ -8,7 +8,7 @@ import (
 	"github.com/jerbe/jim/errors"
 	"github.com/jerbe/jim/log"
 
-	"github.com/jerbe/jcache"
+	"github.com/jerbe/jcache/v2"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -277,7 +277,7 @@ func AddChatMessage(msg *ChatMessage) error {
 	// 将聊天数据推送到缓存定长队列中去
 	// @TODO 暂时这样push,但是这样处理不准确,需要做优化. 因为每个响应的是时长不一样,可能导致顺序不是正确的,甚至是断续的. 如 [1,3,2,4,7,6,5,8,9,11,10,19]
 	cacheKey := cacheKeyFormatLastMessageList(msg.RoomID, msg.SessionType)
-	err = GlobCache.LPush(GlobCtx, cacheKey, msg)
+	err = GlobCache.LPush(GlobCtx, cacheKey, msg).Err()
 	if err != nil && err.Error() == "WRONGTYPE Operation against a key holding the wrong kind of value" {
 		GlobCache.Del(GlobCtx, cacheKey)
 	}
@@ -342,7 +342,7 @@ func AddChatMessageTx(msg *ChatMessage) error {
 
 			// 将聊天数据推送到缓存定长队列中去
 			cacheKey := cacheKeyFormatLastMessageList(msg.RoomID, msg.SessionType)
-			err = GlobCache.LPush(GlobCtx, cacheKey, msg)
+			err = GlobCache.LPush(GlobCtx, cacheKey, msg).Err()
 			if err != nil {
 				GlobCache.Del(GlobCtx, cacheKey)
 				log.Error().Err(err).Msgf("推送消息到缓存列表失败:\n %+v", err)
@@ -496,7 +496,7 @@ func GetLastChatMessageList(roomID string, sessionType int, opts ...*GetOptions)
 
 	// 如果有使用缓存,则从缓存中获取
 	if opt.UseCache() {
-		exists, _ := GlobCache.Exists(GlobCtx, cacheKey)
+		exists := GlobCache.Exists(GlobCtx, cacheKey).Val()
 		if exists > 0 {
 			var messages []*ChatMessage
 			err := GlobCache.LRangAndScan(GlobCtx, &messages, cacheKey, 0, defaultLastLimit-1)
@@ -523,7 +523,7 @@ func GetLastChatMessageList(roomID string, sessionType int, opts ...*GetOptions)
 			// @todo 设置缓存为找不到记录
 
 			cacheKey := cacheKeyFormatLastMessageList(roomID, sessionType)
-			if err := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err != nil {
+			if err := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration).Err(); err != nil {
 				log.Error().Err(err).Str("cache_key", cacheKey).Msg("缓存写入失败")
 			}
 
@@ -545,10 +545,10 @@ func GetLastChatMessageList(roomID string, sessionType int, opts ...*GetOptions)
 		pushData = append(pushData, msg)
 	}
 
-	err = GlobCache.LPush(GlobCtx, cacheKey, pushData...)
+	err = GlobCache.LPush(GlobCtx, cacheKey, pushData...).Err()
 	if err != nil && err.Error() == "WRONGTYPE Operation against a key holding the wrong kind of value" {
 		GlobCache.Del(GlobCtx, cacheKey)
-		err = GlobCache.LPush(GlobCtx, cacheKey, pushData...)
+		err = GlobCache.LPush(GlobCtx, cacheKey, pushData...).Err()
 		if err != nil {
 			log.Warn().Err(err).Msg("缓存插入聊天消息失败")
 		}

@@ -8,8 +8,8 @@ import (
 	"github.com/jerbe/jim/config"
 	"github.com/jerbe/jim/errors"
 
-	"github.com/jerbe/jcache"
-	"github.com/jerbe/jcache/driver"
+	"github.com/jerbe/jcache/v2"
+	"github.com/jerbe/jcache/v2/driver"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"

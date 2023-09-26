@@ -11,7 +11,7 @@ import (
 	"github.com/jerbe/jim/log"
 	"github.com/jerbe/jim/utils"
 
-	"github.com/jerbe/jcache"
+	"github.com/jerbe/jcache/v2"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -215,17 +215,16 @@ func GetUserRelation(id int64, opts ...*GetOptions) (*UserRelation, error) {
 	opt := MergeGetOptions(opts)
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatUserRelationID(id)
-		exists, _ := GlobCache.Exists(GlobCtx, cacheKey)
+		exists := GlobCache.Exists(GlobCtx, cacheKey).Val()
 		if exists > 0 {
 			relation := &UserRelation{}
-			err := GlobCache.CheckAndScan(GlobCtx, relation, cacheKey)
-			if err == nil {
-				return relation, nil
+			value := GlobCache.Get(GlobCtx, cacheKey)
+			if value.Err() == nil && value.Val() != "" {
+				err := value.Scan(relation)
+				return relation, err
 			}
-
-			// 如果有记录,并且记录内容为空,则表示被标记成查询空
-			if errors.IsEmptyRecord(err) {
-				return nil, errors.Wrap(err)
+			if value.Err() == nil && value.Val() == "" {
+				return nil, errors.NoRecords
 			}
 		}
 	}
@@ -238,7 +237,7 @@ func GetUserRelation(id int64, opts ...*GetOptions) (*UserRelation, error) {
 		if err == sql.ErrNoRows {
 			// 写入缓存,如果key不存在的话
 			var cacheKey = cacheKeyFormatUserRelationID(id)
-			if err := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err != nil {
+			if err := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration).Err(); err != nil {
 				log.Error().Err(err).Str("cache_key", cacheKey).Msg("缓存写入失败")
 			}
 		}
@@ -258,17 +257,16 @@ func GetUserRelationByUsersID(userAID int64, userBID int64, opts ...*GetOptions)
 	opt := MergeGetOptions(opts)
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatUserRelationUserIDs(userAID, userBID)
-		exists, _ := GlobCache.Exists(GlobCtx, cacheKey)
+		exists := GlobCache.Exists(GlobCtx, cacheKey).Val()
 		if exists > 0 {
 			relation := &UserRelation{}
-			err := GlobCache.CheckAndScan(GlobCtx, relation, cacheKey)
-			if err == nil {
-				return relation, nil
+			value := GlobCache.Get(GlobCtx, cacheKey)
+			if value.Err() == nil && value.Val() != "" {
+				err := value.Scan(relation)
+				return relation, err
 			}
-
-			// 如果有记录,并且记录内容为空,则表示被标记成查询空
-			if errors.IsEmptyRecord(err) {
-				return nil, errors.Wrap(err)
+			if value.Err() == nil && value.Val() == "" {
+				return nil, errors.NoRecords
 			}
 		}
 
@@ -284,7 +282,7 @@ func GetUserRelationByUsersID(userAID int64, userBID int64, opts ...*GetOptions)
 		if err == sql.ErrNoRows {
 			// 写入缓存,如果key不存在的话
 			var cacheKey = cacheKeyFormatUserRelationUserIDs(a, b)
-			if err := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err != nil {
+			if err := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration).Err(); err != nil {
 				log.Error().Err(err).Str("cache_key", cacheKey).Msg("缓存写入失败")
 			}
 		}
@@ -429,12 +427,24 @@ func UpdateUserRelation(filter *UpdateUserRelationFilter, data *UpdateUserRelati
 		var got bool
 		if filter.ID > 0 {
 			got = true
-			err = GlobCache.CheckAndScan(GlobCtx, relation, cacheKeyFormatUserRelationID(filter.ID))
+			val := GlobCache.Get(GlobCtx, cacheKeyFormatUserRelationID(filter.ID))
+			err = val.Err()
+			if err == nil && val.Val() == "" {
+				err = errors.NoRecords
+			} else if err == nil {
+				err = val.Scan(relation)
+			}
 		}
 
 		if filter.UserAID > 0 && (!got || err != nil) {
 			got = true
-			err = GlobCache.CheckAndScan(GlobCtx, relation, cacheKeyFormatUserRelationUserIDs(filter.UserAID, filter.UserBID))
+			val := GlobCache.Get(GlobCtx, cacheKeyFormatUserRelationUserIDs(filter.UserAID, filter.UserBID))
+			err = val.Err()
+			if err == nil && val.Val() == "" {
+				err = errors.NoRecords
+			} else if err == nil {
+				err = val.Scan(relation)
+			}
 		}
 
 		if got && err == nil {

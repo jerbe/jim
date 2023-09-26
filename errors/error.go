@@ -11,7 +11,7 @@ import (
 
 	"github.com/jerbe/go-errors"
 
-	"github.com/jerbe/jcache"
+	"github.com/jerbe/jcache/v2"
 
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -50,7 +50,7 @@ var (
 		redis.Nil,
 		mongo.ErrNoDocuments,
 		sql.ErrNoRows,
-		jcache.ErrEmpty,
+		jcache.Nil,
 		NoRecords,
 	}
 )
@@ -67,5 +67,5 @@ func IsNoRecord(err error) bool {
 
 // IsEmptyRecord 掺入的错误信息是有找到,但是值为空
 func IsEmptyRecord(err error) bool {
-	return errors.Is(err, jcache.ErrEmpty)
+	return errors.Is(err, jcache.Nil)
 }

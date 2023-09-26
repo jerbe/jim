@@ -11,7 +11,7 @@ import (
 	"github.com/jerbe/jim/log"
 	"github.com/jerbe/jim/utils"
 
-	"github.com/jerbe/jcache"
+	"github.com/jerbe/jcache/v2"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -55,16 +55,14 @@ func GetUser(id int64, opts ...*GetOptions) (*User, error) {
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatUserID(id)
 		var user = new(User)
-		err := GlobCache.CheckAndScan(GlobCtx, user, cacheKey)
-		if err == nil {
-			return user, nil
+		value := GlobCache.Get(GlobCtx, cacheKey)
+		if value.Err() == nil && value.Val() != "" {
+			err := value.Scan(user)
+			return user, err
 		}
-
-		// 如果有记录,并且记录内容为空,则表示被标记成查询空
-		if errors.IsEmptyRecord(err) {
-			return nil, errors.Wrap(err)
+		if value.Err() == nil && value.Val() == "" {
+			return nil, errors.NoRecords
 		}
-
 	}
 
 	sqlStr := fmt.Sprintf("SELECT `id`,`username`,`password_hash`, `nickname`, `avatar`, `birth_date`, `online_status`, `status`, `created_at`,`updated_at` FROM %s WHERE `id` = ?", TableUsers)
@@ -75,7 +73,7 @@ func GetUser(id int64, opts ...*GetOptions) (*User, error) {
 		if err == sql.ErrNoRows {
 			// 写入缓存,如果key不存在的话
 			var cacheKey = cacheKeyFormatUserID(id)
-			if err1 := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err1 != nil {
+			if err1 := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration).Err(); err1 != nil {
 				log.Error().Err(err1).Str("cache_key", cacheKey).Msg("缓存写入失败")
 			}
 
@@ -98,17 +96,16 @@ func GetUserByUsername(username string, opts ...*GetOptions) (*User, error) {
 	opt := MergeGetOptions(opts)
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatUsername(username)
-		exits, _ := GlobCache.Exists(GlobCtx, cacheKey)
+		exits := GlobCache.Exists(GlobCtx, cacheKey).Val()
 		if exits > 0 {
 			user := new(User)
-			err := GlobCache.CheckAndScan(GlobCtx, user, cacheKey)
-			if err == nil {
-				return user, nil
+			value := GlobCache.Get(GlobCtx, cacheKey)
+			if value.Err() == nil && value.Val() != "" {
+				err := value.Scan(user)
+				return user, err
 			}
-
-			// 如果有记录,并且记录内容为空,则表示被标记成查询空
-			if errors.IsEmptyRecord(err) {
-				return nil, errors.Wrap(err)
+			if value.Err() == nil && value.Val() == "" {
+				return nil, errors.NoRecords
 			}
 		}
 	}
@@ -121,7 +118,7 @@ func GetUserByUsername(username string, opts ...*GetOptions) (*User, error) {
 		if err == sql.ErrNoRows {
 			// 写入缓存,如果key不存在的话
 			cacheKey := cacheKeyFormatUsername(username)
-			if err1 := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration); err1 != nil {
+			if err1 := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration).Err(); err1 != nil {
 				log.Error().Err(err1).Str("cache_key", cacheKey).Msg("缓存写入失败")
 			}
 			return nil, errors.Wrap(err)
