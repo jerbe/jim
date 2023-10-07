@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 
 	"github.com/jerbe/jim/config"
@@ -32,20 +34,41 @@ func main() {
 	handler.InitSubscribe()
 
 	// 初始化Http路由器
-	httpRouter := handler.InitRouter()
-	listenPort := fmt.Sprintf(":%d", config.GlobConfig().Http.Port)
+	mainHttpRouter := handler.InitRouter()
+	mainHttpListenPort := fmt.Sprintf(":%d", config.GlobConfig().Http.MainListenPort)
 
 	sigCh := make(chan os.Signal)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
 
-	httpSvr := &http.Server{Addr: listenPort, Handler: httpRouter.Handler()}
+	mainHttpSvr := &http.Server{Addr: mainHttpListenPort, Handler: mainHttpRouter.Handler()}
 	go func() {
-		log.Info().Str("listen", listenPort).Msg("http服务运行中...")
-		if err := httpSvr.ListenAndServe(); err != nil {
+		log.Info().Str("listen", mainHttpListenPort).Msg("main http服务运行中...")
+		if err := mainHttpSvr.ListenAndServe(); err != nil {
 			if !errors.Is(err, http.ErrServerClosed) {
-				log.Error().Err(err).Str("listen", listenPort).Msg("http服务启动异常")
+				log.Error().Err(err).Str("listen", mainHttpListenPort).Msg("main http服务启动异常")
+				sigCh <- syscall.SIGQUIT
 			} else {
-				log.Warn().Err(err).Str("listen", listenPort).Msg("http服务已关闭")
+				log.Warn().Err(err).Str("listen", mainHttpListenPort).Msg("main http服务已关闭")
+			}
+		}
+	}()
+
+	// 开启对阻塞操作的跟踪
+	runtime.SetBlockProfileRate(1)
+
+	// 开启对锁调用的跟踪
+	runtime.SetMutexProfileFraction(1)
+
+	pprofHttpListenPort := fmt.Sprintf(":%d", config.GlobConfig().Http.PprofListenPort)
+	pprofHttpSvr := &http.Server{Addr: pprofHttpListenPort, Handler: http.DefaultServeMux}
+	go func() {
+		log.Info().Str("listen", pprofHttpListenPort).Msg("pprof http服务运行中...")
+		if err := pprofHttpSvr.ListenAndServe(); err != nil {
+			if !errors.Is(err, http.ErrServerClosed) {
+				log.Error().Err(err).Str("listen", pprofHttpListenPort).Msg("pprof http服务启动异常")
+				sigCh <- syscall.SIGQUIT
+			} else {
+				log.Warn().Err(err).Str("listen", pprofHttpListenPort).Msg("pprof http服务已关闭")
 			}
 		}
 	}()
@@ -53,9 +76,14 @@ func main() {
 	sig := <-sigCh
 	log.Warn().Str("cause", sig.String()).Msg("系统即将退出")
 
-	err := httpSvr.Shutdown(context.Background())
+	err := pprofHttpSvr.Shutdown(context.Background())
 	if err != nil {
-		log.Error().Err(err).Str("listen", listenPort).Msg("http服务关闭异常")
+		log.Error().Err(err).Str("listen", pprofHttpListenPort).Msg("pprof http服务关闭异常")
+	}
+
+	err = mainHttpSvr.Shutdown(context.Background())
+	if err != nil {
+		log.Error().Err(err).Str("listen", mainHttpListenPort).Msg("main http服务关闭异常")
 	}
 }
 

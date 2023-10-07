@@ -982,8 +982,10 @@ github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:
 github.com/ianlancetaylor/demangle v0.0.0-20200824232613-28f6c0f3b639/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/jerbe/go-errors v1.0.1 h1:T6FlCP42zUDJ+g2Jn9n+0cVmkuaMwQi+yok6olk95IA=
 github.com/jerbe/go-errors v1.0.1/go.mod h1:5r4MyF3STntU8CN8oz+4Is5qLmc7HrloIXosBV+4bHk=
-github.com/jerbe/jcache/v2 v2.1.0 h1:JntlMpMKb1vPvVP764nP5+nShBhqWVQK20hnZt5j9Nk=
-github.com/jerbe/jcache/v2 v2.1.0/go.mod h1:7Bb3O+GBwXIZQC6k6rbHuZWkvr6MZAnWWChqce7OQTU=
+github.com/jerbe/go-utils v1.0.0 h1:eOCqEfI1FfNrqmSUDq1P9QCDwoJnKBlQ7QvgS8tFhvw=
+github.com/jerbe/go-utils v1.0.0/go.mod h1:z3M07rwAHygaLhbg0+CapMRopGkHgQuXwJ+SqFi68yQ=
+github.com/jerbe/jcache/v2 v2.1.2 h1:zgyJO5L/gdkVi315a5rCVTMQv16N8jSdrCFcSqnNH34=
+github.com/jerbe/jcache/v2 v2.1.2/go.mod h1:7Bb3O+GBwXIZQC6k6rbHuZWkvr6MZAnWWChqce7OQTU=
 github.com/jmoiron/sqlx v1.3.5 h1:vFFPA71p1o5gAeqtEAwLU4dnX2napprKtHr7PYIcN3g=
 github.com/jmoiron/sqlx v1.3.5/go.mod h1:nRVWtLre0KfCLJvgxzCsLVMogSvQ1zNJtpYr2Ccp0mQ=
 github.com/jpillora/backoff v1.0.0/go.mod h1:J/6gKK9jxlEcS3zixgDgUAsiuZ7yrSoa/FX5e0EB2j4=

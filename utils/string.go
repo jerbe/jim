@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	goutils "github.com/jerbe/go-utils"
 
 	"github.com/google/uuid"
 )
@@ -33,12 +34,7 @@ func FormatWorldRoomID(worldID int64) string {
 
 // StringCut 裁剪字符串
 func StringCut(data string, limit int) string {
-	d := []rune(data)
-	l := len(d)
-	if l < limit {
-		limit = l
-	}
-	return string(d[0:limit])
+	return goutils.StringTrim(data, 0, limit)
 }
 
 // StringLen 返回字符串的长度,因为中文需要3个字节(byte),所以,我们使用rune来代替

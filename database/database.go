@@ -209,3 +209,9 @@ func initRedis(cfg config.Redis) (redis.UniversalClient, error) {
 	}
 	return redisCli, nil
 }
+
+// checkCacheEmpty 检测缓存是佛是空记录
+func checkCacheEmpty(cacheKey string) bool {
+	v, err := GlobCache.Get(GlobCtx, cacheKey).Result()
+	return err == nil && v == ""
+}

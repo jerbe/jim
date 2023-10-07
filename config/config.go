@@ -35,8 +35,11 @@ type Redis struct {
 }
 
 type Http struct {
-	// Port 启用HTTP服务的端口
-	Port int `yaml:"port"`
+	// MainListenPort 启用Main HTTP服务的监听端口
+	MainListenPort int `yaml:"main_listen_port"`
+
+	// PprofListenPort 启用 Pprof HTTP服务的监听端口
+	PprofListenPort int `yaml:"pprof_listen_port"`
 }
 
 type MySQL struct {

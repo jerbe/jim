@@ -13,6 +13,7 @@ import (
 // ====================================
 // ============ 账户信息 ================
 // ====================================
+
 // ProfileInfoResponse 个人画像的数据结构
 type ProfileInfoResponse struct {
 	Username     string `json:"username"`

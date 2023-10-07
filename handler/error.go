@@ -31,8 +31,6 @@ var (
 
 	MessageInvalidSessionType = "'session_type'无效"
 
-	MessageInvalidReceiverID = "'receiver_id'无效"
-
 	MessageInvalidType = "'type'无效"
 
 	MessageInvalidTargetID = "'target_id'无效"
@@ -76,6 +74,10 @@ var (
 	MessageEmptyCaptcha = "验证码未填写"
 
 	MessageInvalidCaptcha = "验证码无效"
+
+	MessageForbidden = "没有权限"
+
+	MessageRollbackChatMessageFailure = "撤回聊天消息失败"
 )
 
 // MessageInvalidFormat 格式化参数无效错误

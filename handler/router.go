@@ -1,7 +1,11 @@
 package handler
 
 import (
+	"time"
+
 	"github.com/jerbe/jim/pubsub"
+
+	goutils "github.com/jerbe/go-utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -54,7 +58,7 @@ func InitRouter() *gin.Engine {
 	// WebSocket连接
 	rootRouter.GET("/api/v1/ws", WebsocketMiddleware(), WebsocketHandler)
 
-	apiGroup := rootRouter.Group("/api/v1", RequestLogMiddleware(), CheckAuthMiddleware())
+	apiGroup := rootRouter.Group("/api/v1", RateLimitMiddleware(goutils.NewLimiter(1000000, time.Second)), RequestLogMiddleware(), CheckAuthMiddleware())
 	{
 		// 个人画像
 		profile := apiGroup.Group("/profile")
@@ -65,7 +69,7 @@ func InitRouter() *gin.Engine {
 		// 聊天
 		chat := apiGroup.Group("/chat")
 		chat.POST("/message/send", SendChatMessageHandler)
-		chat.POST("/message/rollback_", RollbackChatMessageHandler)
+		chat.POST("/message/rollback", RollbackChatMessageHandler)
 		chat.POST("/message/delete", DeleteChatMessageHandler)
 		chat.GET("/message/last", GetLastChatMessagesHandler)
 	}

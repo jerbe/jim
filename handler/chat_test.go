@@ -5,7 +5,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/goccy/go-json"
 	"github.com/gorilla/websocket"
+	goutils "github.com/jerbe/go-utils"
 	"sync"
+	"time"
 
 	"io"
 	"log"
@@ -123,7 +125,7 @@ func BenchmarkChatSendMessageUseApi(b *testing.B) {
 	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJleHAiOjE3MjU2MzQ0ODl9.WTqdIHkA8D8lfE_nJVir9Z64Cy1gZ-V11extOlvUjSI"
 
 	file, err := os.Open("./benchmark.log")
-	if err != nil && os.IsNotExist(err) {
+	if err != nil && !os.IsNotExist(err) {
 		log.Println(err)
 		return
 	}
@@ -148,7 +150,7 @@ func BenchmarkChatSendMessageUseApi(b *testing.B) {
 			//w := httptest.NewRecorder()
 			///req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:8080/api/chat/send_message", bytes.NewBufferString(jsonData))
 			b.StopTimer()
-			req, err := http.NewRequest(http.MethodPost, "http://192.168.31.100:8080/api/v1/chat/message/send", bytes.NewBufferString(jsonData))
+			req, err := http.NewRequest(http.MethodPost, "http://127.0.0.1:8080/api/v1/chat/message/send", bytes.NewBufferString(jsonData))
 			req.Header.Add("Authorization", token)
 			req.Header.Add("Content-Type", "application/json")
 
@@ -270,6 +272,7 @@ func BenchmarkChatSendMessageParallel(b *testing.B) {
 	//	log.Println(err)
 	//	return
 	//}
+
 	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJleHAiOjE3MjU2MzQ0ODl9.WTqdIHkA8D8lfE_nJVir9Z64Cy1gZ-V11extOlvUjSI"
 
 	//file, err := os.Open("./benchmark.log")
@@ -277,6 +280,8 @@ func BenchmarkChatSendMessageParallel(b *testing.B) {
 	//	log.Println(err)
 	//	return
 	//}
+
+	limiterMiddleware := RateLimitMiddleware(goutils.NewLimiter(1<<2, time.Millisecond*100))
 	os.Remove("./benchmark.log")
 
 	file, err := os.OpenFile("./benchmark.log", os.O_CREATE|os.O_RDWR, 0755)
@@ -303,7 +308,7 @@ func BenchmarkChatSendMessageParallel(b *testing.B) {
 			ctx.Request = req
 
 			b.StartTimer()
-
+			limiterMiddleware(ctx)
 			CheckAuthMiddleware()(ctx)
 			SendChatMessageHandler(ctx)
 

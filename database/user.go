@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jerbe/jcache/v2"
 	"github.com/jerbe/jim/errors"
 	"github.com/jerbe/jim/log"
-	"github.com/jerbe/jim/utils"
 
-	"github.com/jerbe/jcache/v2"
+	goutils "github.com/jerbe/go-utils"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -70,7 +70,7 @@ func GetUser(id int64, opts ...*GetOptions) (*User, error) {
 	user := &User{}
 	err := sqlx.Get(opt.SQLExt(), user, sqlStr, id)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			// 写入缓存,如果key不存在的话
 			var cacheKey = cacheKeyFormatUserID(id)
 			if err1 := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration).Err(); err1 != nil {
@@ -141,7 +141,7 @@ func GetUsers(ids []int64, opts ...*GetOptions) ([]*User, error) {
 	// 去重后的用户ID
 
 	var uqIds []int64
-	err := utils.SliceUnique(ids, &uqIds)
+	err := goutils.SliceUnique(ids, &uqIds)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}

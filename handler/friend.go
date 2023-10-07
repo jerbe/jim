@@ -13,6 +13,8 @@ import (
 	"github.com/jerbe/jim/utils"
 	"github.com/jerbe/jim/websocket"
 
+	goutils "github.com/jerbe/go-utils"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -392,7 +394,7 @@ func UpdateFriendInviteHandler(ctx *gin.Context) {
 		return
 	}
 
-	if utils.In(invite.Status, 1, 2) {
+	if goutils.In(invite.Status, 1, 2) {
 		JSONError(ctx, StatusError, "该邀请已处理,无法再次处理")
 		return
 	}
@@ -515,7 +517,7 @@ func UpdateFriendHandle(ctx *gin.Context) {
 	}
 
 	// 只能进行删除,0为拉黑好友,1为取消拉黑
-	if req.BlockStatus != nil && !utils.In(*req.BlockStatus, 0, 1) {
+	if req.BlockStatus != nil && !goutils.In(*req.BlockStatus, 0, 1) {
 		JSONError(ctx, StatusError, "'block_status'必须为'0'或'1'")
 		return
 	}

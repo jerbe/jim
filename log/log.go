@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jerbe/jim/utils"
+	goutils "github.com/jerbe/go-utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/natefinch/lumberjack/v3"
@@ -79,42 +79,42 @@ func newRollingFile(filename string) io.Writer {
 }
 
 func Request() *zerolog.Event {
-	l := requestLogger.With().Str("hostname", utils.GetHostname()).Logger()
+	l := requestLogger.With().Str("hostname", goutils.GetHostname()).Logger()
 	return (&l).Info()
 }
 
 func Debug() *zerolog.Event {
-	l := infoLogger.With().Str("hostname", utils.GetHostname()).Caller().Logger()
+	l := infoLogger.With().Str("hostname", goutils.GetHostname()).Caller().Logger()
 	return (&l).Debug()
 }
 
 func Info() *zerolog.Event {
-	l := infoLogger.With().Str("hostname", utils.GetHostname()).Caller().Logger()
+	l := infoLogger.With().Str("hostname", goutils.GetHostname()).Caller().Logger()
 	return (&l).Info()
 }
 
 func Warn() *zerolog.Event {
-	l := errorLogger.With().Str("hostname", utils.GetHostname()).Caller().Logger()
+	l := errorLogger.With().Str("hostname", goutils.GetHostname()).Caller().Logger()
 	return (&l).Warn()
 }
 
 func Error() *zerolog.Event {
-	l := errorLogger.With().Str("hostname", utils.GetHostname()).Caller().Stack().Logger()
+	l := errorLogger.With().Str("hostname", goutils.GetHostname()).Caller().Stack().Logger()
 	return (&l).Error()
 }
 
 func Fatal() *zerolog.Event {
-	l := errorLogger.With().Str("hostname", utils.GetHostname()).Caller().Logger()
+	l := errorLogger.With().Str("hostname", goutils.GetHostname()).Caller().Logger()
 	return (&l).Fatal()
 }
 
 func Panic() *zerolog.Event {
-	l := errorLogger.With().Str("hostname", utils.GetHostname()).Caller().Logger()
+	l := errorLogger.With().Str("hostname", goutils.GetHostname()).Caller().Logger()
 	return (&l).Panic()
 }
 
 func parseGinContextToLog(evt *zerolog.Event, ctx *gin.Context) *zerolog.Event {
-	clientIP, _ := utils.GetClientIP(ctx.Request)
+	clientIP, _ := goutils.GetClientIP(ctx.Request)
 	evt.Str("request_id", ctx.GetString("REQUEST_ID")).
 		Str("user_id", ctx.GetString("LOGIN_USER_ID")).
 		Str("method", ctx.Request.Method).

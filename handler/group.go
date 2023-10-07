@@ -9,6 +9,8 @@ import (
 	"github.com/jerbe/jim/log"
 	"github.com/jerbe/jim/utils"
 
+	goutils "github.com/jerbe/go-utils"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -61,7 +63,7 @@ func CreateGroupHandler(ctx *gin.Context) {
 	}
 
 	var members []int64
-	err = utils.SliceUnique(req.MemberIDs, &members)
+	err = goutils.SliceUnique(req.MemberIDs, &members)
 	if err != nil {
 		JSONError(ctx, StatusError, err.Error())
 		return
@@ -269,7 +271,7 @@ func UpdateGroupHandler(ctx *gin.Context) {
 		return
 	}
 
-	if utils.Equal(nil, req.Name, req.OwnerID, req.SpeakStatus) {
+	if goutils.EqualAll(nil, req.Name, req.OwnerID, req.SpeakStatus) {
 		JSONError(ctx, StatusError, "更改的项未填写")
 		return
 	}
@@ -319,7 +321,7 @@ func UpdateGroupHandler(ctx *gin.Context) {
 			return
 		}
 
-		if !utils.In(*req.SpeakStatus, 0, 1) {
+		if !goutils.In(*req.SpeakStatus, 0, 1) {
 			JSONError(ctx, StatusError, "修改发言权限失败,必须是0/1")
 			return
 		}
@@ -569,7 +571,7 @@ func UpdateGroupMemberHandler(ctx *gin.Context) {
 		return
 	}
 
-	if utils.Equal(nil, req.Role, req.SpeakStatus) {
+	if goutils.EqualAll(nil, req.Role, req.SpeakStatus) {
 		JSONError(ctx, StatusError, "更改的项未填写")
 		return
 	}
@@ -611,7 +613,7 @@ func UpdateGroupMemberHandler(ctx *gin.Context) {
 	}
 
 	// 普通用户无权限
-	if !utils.In(editor.Role, 1, 2) {
+	if !goutils.In(editor.Role, 1, 2) {
 		JSONError(ctx, StatusError, "无权限")
 		return
 	}
@@ -632,7 +634,7 @@ func UpdateGroupMemberHandler(ctx *gin.Context) {
 	// 改变角色:将目标角色设置成管理员(2-manager)/取消管理员(2-manager)
 	//		条件: 编辑人角色必须是群主(1-owner)
 	if req.Role != nil {
-		if !utils.In(*req.Role, 0, 2) {
+		if !goutils.In(*req.Role, 0, 2) {
 			JSONError(ctx, StatusError, "无效的角色类型")
 			return
 		}

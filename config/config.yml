@@ -6,8 +6,11 @@ main:
   server_name: "jim"
 
 http:
-  # http服务的监听端口
-  port: 8080
+  # main http服务的监听端口
+  main_listen_port: 8080
+
+  # pprof http服务的监听端口
+  pprof_listen_port: 9091
 
 # Redis相关配置
 redis:

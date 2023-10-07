@@ -9,6 +9,7 @@ import (
 	"github.com/jerbe/jim/log"
 
 	"github.com/jerbe/jcache/v2"
+	"github.com/jerbe/jcache/v2/driver"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -275,13 +276,13 @@ func AddChatMessage(msg *ChatMessage) error {
 	}
 
 	// 将聊天数据推送到缓存定长队列中去
-	// @TODO 暂时这样push,但是这样处理不准确,需要做优化. 因为每个响应的是时长不一样,可能导致顺序不是正确的,甚至是断续的. 如 [1,3,2,4,7,6,5,8,9,11,10,19]
 	cacheKey := cacheKeyFormatLastMessageList(msg.RoomID, msg.SessionType)
-	err = GlobCache.LPush(GlobCtx, cacheKey, msg).Err()
-	if err != nil && err.Error() == "WRONGTYPE Operation against a key holding the wrong kind of value" {
+	err = GlobCache.ZAdd(GlobCtx, cacheKey, driver.Z{Member: msg, Score: float64(msg.MessageID)}).Err()
+	// 如果报错的话,直接删除缓存,因为有可能设置成empty模式
+	if err != nil {
 		GlobCache.Del(GlobCtx, cacheKey)
+		err = GlobCache.ZAdd(GlobCtx, cacheKey, driver.Z{Member: msg, Score: float64(msg.MessageID)}).Err()
 	}
-
 	if err == nil {
 		GlobCache.Expire(GlobCtx, cacheKey, jcache.RandomExpirationDuration())
 	}
@@ -342,7 +343,8 @@ func AddChatMessageTx(msg *ChatMessage) error {
 
 			// 将聊天数据推送到缓存定长队列中去
 			cacheKey := cacheKeyFormatLastMessageList(msg.RoomID, msg.SessionType)
-			err = GlobCache.LPush(GlobCtx, cacheKey, msg).Err()
+			err = GlobCache.ZAdd(GlobCtx, cacheKey, driver.Z{Member: msg, Score: float64(msg.MessageID)}).Err()
+			// 如果报错的话,直接删除缓存,因为有可能设置成empty模式
 			if err != nil {
 				GlobCache.Del(GlobCtx, cacheKey)
 				log.Error().Err(err).Msgf("推送消息到缓存列表失败:\n %+v", err)
@@ -363,14 +365,17 @@ func AddChatMessageTx(msg *ChatMessage) error {
 }
 
 // RollbackChatMessage 撤回一条消息
-func RollbackChatMessage(id primitive.ObjectID) (bool, error) {
+func RollbackChatMessage(roomID string, sessionType int, senderID, msgID int64) (bool, error) {
 	now := time.Now()
 	rs, err := GlobDB.Mongo.Database(DatabaseMongodbIM).
 		Collection(CollectionMessage).
 		UpdateOne(GlobCtx, bson.M{
-			"_id":        id,
-			"status":     bson.M{"$ne": 3},
-			"created_at": bson.M{"$gt": now.Add(-2 * time.Minute).UnixMilli()}, // 2分钟内禁止撤回
+			"room_id":      roomID,
+			"session_type": sessionType,
+			"message_id":   msgID,
+			"sender_id":    senderID,
+			"status":       bson.M{"$ne": 3},
+			"created_at":   bson.M{"$gt": now.Add(-2 * time.Minute).UnixMilli()}, // 2分钟内禁止撤回
 		}, bson.M{
 			"$set": bson.M{
 				"status":     3,
@@ -447,7 +452,7 @@ func (f *GetChatMessageListFilter) SetLastMessageID(val int64) *GetChatMessageLi
 }
 
 // GetChatMessageList 获取消息列表
-func GetChatMessageList(filter *GetChatMessageListFilter, opts ...*GetOptions) ([]*ChatMessage, error) {
+func GetChatMessageList(filter *GetChatMessageListFilter) ([]*ChatMessage, error) {
 	if filter.Sort == nil {
 		filter.Sort = bson.M{"message_id": -1}
 	}
@@ -495,19 +500,17 @@ func GetLastChatMessageList(roomID string, sessionType int, opts ...*GetOptions)
 	cacheKey := cacheKeyFormatLastMessageList(roomID, sessionType)
 
 	// 如果有使用缓存,则从缓存中获取
-	if opt.UseCache() {
-		exists := GlobCache.Exists(GlobCtx, cacheKey).Val()
-		if exists > 0 {
-			var messages []*ChatMessage
-			err := GlobCache.LRangAndScan(GlobCtx, &messages, cacheKey, 0, defaultLastLimit-1)
-			if err == nil {
-				return messages, nil
-			}
+	if opt.UseCache() && GlobCache.Exists(GlobCtx, cacheKey).Val() > 0 {
+		// 如果是空记录,则直接返回空记录
+		if checkCacheEmpty(cacheKey) {
+			return nil, errors.Wrap(errors.NoRecords)
+		}
 
-			// 如果有记录,并且记录内容为空,则表示被标记成查询空
-			if errors.IsEmptyRecord(err) {
-				return nil, errors.Wrap(err)
-			}
+		var messages []*ChatMessage
+		//最后聊天记录按聊天消息从大玩小排
+		err := GlobCache.ZRevRange(GlobCtx, cacheKey, 0, defaultLastLimit-1).ScanSlice(messages)
+		if err == nil {
+			return messages, nil
 		}
 	}
 
@@ -518,23 +521,18 @@ func GetLastChatMessageList(roomID string, sessionType int, opts ...*GetOptions)
 			"session_type": sessionType,
 		}, options.Find().SetSort(bson.M{"message_id": -1}).SetLimit(defaultLastLimit))
 
-	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			// @todo 设置缓存为找不到记录
-
-			cacheKey := cacheKeyFormatLastMessageList(roomID, sessionType)
-			if err := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration).Err(); err != nil {
-				log.Error().Err(err).Str("cache_key", cacheKey).Msg("缓存写入失败")
-			}
-
-			return nil, errors.Wrap(err)
+	if err != nil && errors.Is(err, mongo.ErrNoDocuments) {
+		// @todo 设置缓存为找不到记录
+		if err := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration).Err(); err != nil {
+			log.Error().Err(err).Str("cache_key", cacheKey).Msg("缓存写入失败")
 		}
 		return nil, errors.Wrap(err)
 	}
 
 	defer rs.Close(GlobCtx)
 	messages := make([]*ChatMessage, 0, defaultLastLimit)
-	pushData := make([]any, 0, defaultLastLimit)
+
+	pushData := make([]driver.Z, 0, defaultLastLimit)
 	for rs.Next(GlobCtx) {
 		msg := new(ChatMessage)
 		err = rs.Decode(msg)
@@ -542,13 +540,13 @@ func GetLastChatMessageList(roomID string, sessionType int, opts ...*GetOptions)
 			return nil, errors.Wrap(err)
 		}
 		messages = append(messages, msg)
-		pushData = append(pushData, msg)
+		pushData = append(pushData, driver.Z{Member: msg, Score: float64(msg.MessageID)})
 	}
 
-	err = GlobCache.LPush(GlobCtx, cacheKey, pushData...).Err()
-	if err != nil && err.Error() == "WRONGTYPE Operation against a key holding the wrong kind of value" {
+	err = GlobCache.ZAdd(GlobCtx, cacheKey, pushData...).Err()
+	if err != nil {
 		GlobCache.Del(GlobCtx, cacheKey)
-		err = GlobCache.LPush(GlobCtx, cacheKey, pushData...).Err()
+		err = GlobCache.ZAdd(GlobCtx, cacheKey, pushData...).Err()
 		if err != nil {
 			log.Warn().Err(err).Msg("缓存插入聊天消息失败")
 		}

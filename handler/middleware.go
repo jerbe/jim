@@ -17,6 +17,8 @@ import (
 	"github.com/jerbe/jim/log"
 	"github.com/jerbe/jim/utils"
 
+	goutils "github.com/jerbe/go-utils"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rs/zerolog"
@@ -34,7 +36,19 @@ type UserClaims struct {
 	jwt.RegisteredClaims
 }
 
-// CORSMiddleware
+// RateLimitMiddleware 请求速率限定中间件
+func RateLimitMiddleware(limiter *goutils.Limiter) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		if !limiter.Allow() {
+			ctx.Abort()
+			JSONError(ctx, StatusError, "请求达到最大次数")
+			return
+		}
+		ctx.Next()
+	}
+}
+
+// CORSMiddleware 允许跨域中间件
 func CORSMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		//r := ctx.Request
@@ -107,7 +121,7 @@ func RecoverMiddleware() gin.HandlerFunc {
 // 需要在ctx.Next() 之前调用 日志的send或者msg
 func WebsocketMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		clientIP, _ := utils.GetClientIP(ctx.Request)
+		clientIP, _ := goutils.GetClientIP(ctx.Request)
 		requestID := getAndStoreRequestID(ctx)
 		l := log.Request().
 			Str("request_id", requestID).
@@ -135,7 +149,7 @@ func WebsocketMiddleware() gin.HandlerFunc {
 // RequestLogMiddleware 请求日志中间件
 func RequestLogMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		clientIP, _ := utils.GetClientIP(ctx.Request)
+		clientIP, _ := goutils.GetClientIP(ctx.Request)
 		requestID := getAndStoreRequestID(ctx)
 		l := log.Request().
 			Str("request_id", requestID).

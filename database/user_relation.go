@@ -11,6 +11,7 @@ import (
 	"github.com/jerbe/jim/log"
 	"github.com/jerbe/jim/utils"
 
+	goutils "github.com/jerbe/go-utils"
 	"github.com/jerbe/jcache/v2"
 
 	"github.com/jmoiron/sqlx"
@@ -350,7 +351,7 @@ func UpdateUserRelation(filter *UpdateUserRelationFilter, data *UpdateUserRelati
 	opt := MergeSetOptions(opts)
 
 	// 与源数据一样,不用更新
-	if utils.Equal(nil, data.Status, data.BlockStatus, data.RemarkOnA, data.RemarkOnB) {
+	if goutils.EqualAll(nil, data.Status, data.BlockStatus, data.RemarkOnA, data.RemarkOnB) {
 		return 0, errors.ParamsInvalid
 	}
 

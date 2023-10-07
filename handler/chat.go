@@ -13,6 +13,8 @@ import (
 	"github.com/jerbe/jim/utils"
 	"github.com/jerbe/jim/websocket"
 
+	goutils "github.com/jerbe/go-utils"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -130,13 +132,13 @@ func SendChatMessageHandler(ctx *gin.Context) {
 		return
 	}
 
-	if !utils.In(req.SessionType, database.ChatMessageSessionTypePrivate, database.ChatMessageSessionTypeGroup, database.ChatMessageSessionTypeWorld) {
+	if !goutils.In(req.SessionType, database.ChatMessageSessionTypePrivate, database.ChatMessageSessionTypeGroup, database.ChatMessageSessionTypeWorld) {
 		JSONError(ctx, StatusError, MessageInvalidSessionType)
 		return
 	}
 
 	if req.TargetID <= 0 {
-		JSONError(ctx, StatusError, MessageInvalidReceiverID)
+		JSONError(ctx, StatusError, MessageInvalidTargetID)
 		return
 	}
 
@@ -397,12 +399,86 @@ func fillChatMessageForPublish(rsp *ChatMessage) *pubsub.ChatMessage {
 	return msg
 }
 
-// RollbackChatMessageHandler 回滚聊天消息处理方法
-func RollbackChatMessageHandler(ctx *gin.Context) {
+// RollbackChatMessageRequest 回滚聊天消息请求参数
+type RollbackChatMessageRequest struct {
+	// TargetID 目标ID; 朋友ID/群ID/世界频道ID
+	TargetID int64 `form:"target_id" json:"target_id"`
 
+	// SessionType 会话类型; 1-私人会话;2-群聊会话;99-世界频道会话
+	SessionType int `form:"session_type" json:"session_type"`
+
+	// MessageID 消息ID
+	MessageID int64 `form:"message_id" json:"message_id"`
+}
+
+// RollbackChatMessageHandler 撤回聊天消息处理方法
+// @Summary      撤回聊天消息处理方法
+// @Tags         聊天
+// @Accept       json
+// @Produce      json
+// @Param        jsonRaw    body      RollbackChatMessageRequest  true  "请求JSON数据体"
+// @Security 	 APIKeyQuery
+// @Success      200  {object}  Response
+// @Failure      400  {object}  Response
+// @Failure      404  {object}  Response
+// @Failure      500  {object}  Response
+// @Router       /v1/chat/message/rollback [post]
+func RollbackChatMessageHandler(ctx *gin.Context) {
+	currentUser := LoginUserFromContext(ctx)
+
+	req := &RollbackChatMessageRequest{}
+	err := ctx.BindJSON(req)
+	if err != nil {
+		JSONError(ctx, StatusError, err.Error())
+		return
+	}
+
+	if !goutils.In(req.SessionType, database.ChatMessageSessionTypePrivate, database.ChatMessageSessionTypeGroup) {
+		JSONError(ctx, StatusError, MessageInvalidSessionType)
+		return
+	}
+
+	if req.TargetID <= 0 {
+		JSONError(ctx, StatusError, MessageInvalidTargetID)
+		return
+	}
+
+	var roomID string
+	switch req.SessionType {
+	case database.ChatMessageSessionTypePrivate:
+		// 如果没有建立过关系,无法进行聊天消息配置
+		u, _ := database.GetUserRelationByUsersID(currentUser.ID, req.TargetID)
+		if u == nil {
+			JSONError(ctx, StatusError, MessageForbidden)
+			return
+		}
+		roomID = utils.FormatPrivateRoomID(currentUser.ID, req.TargetID)
+	case database.ChatMessageSessionTypeGroup:
+		// 检测是否是该群成员
+		m, _ := database.GetGroupMember(req.TargetID, currentUser.ID)
+		if m == nil {
+			JSONError(ctx, StatusError, MessageForbidden)
+			return
+		}
+		roomID = utils.FormatGroupRoomID(req.TargetID)
+	}
+
+	ok, err := database.RollbackChatMessage(roomID, req.SessionType, currentUser.ID, req.MessageID)
+	if err != nil {
+		JSONError(ctx, StatusError, MessageInternalServerError)
+		log.ErrorFromGinContext(ctx).Err(err).Str("err_format", fmt.Sprintf("%+v", err)).Msg("撤回聊天消息失败")
+		return
+	}
+
+	if !ok {
+		JSONError(ctx, StatusError, MessageRollbackChatMessageFailure)
+		return
+	}
+	JSON(ctx)
 }
 
 // DeleteChatMessageHandler 删除聊天消息处理方法
+
 func DeleteChatMessageHandler(ctx *gin.Context) {
 
 }
@@ -443,7 +519,7 @@ func GetLastChatMessagesHandler(ctx *gin.Context) {
 		return
 	}
 
-	if !utils.In(req.SessionType, database.ChatMessageSessionTypePrivate, database.ChatMessageSessionTypePrivate, database.ChatMessageSessionTypePrivate) {
+	if !goutils.In(req.SessionType, database.ChatMessageSessionTypePrivate, database.ChatMessageSessionTypePrivate, database.ChatMessageSessionTypePrivate) {
 		JSONError(ctx, StatusError, MessageInvalidSessionType)
 		return
 	}
@@ -451,6 +527,7 @@ func GetLastChatMessagesHandler(ctx *gin.Context) {
 	currentUser := LoginUserFromContext(ctx)
 	roomID := ""
 
+	// @TODO 验证用户是否有房间聊天记录阅读权限
 	switch req.SessionType {
 	case database.ChatMessageSessionTypePrivate:
 		roomID = utils.FormatPrivateRoomID(currentUser.ID, req.TargetID)

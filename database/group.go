@@ -12,6 +12,7 @@ import (
 	"github.com/jerbe/jim/log"
 	"github.com/jerbe/jim/utils"
 
+	goutils "github.com/jerbe/go-utils"
 	"github.com/jerbe/jcache/v2"
 
 	"github.com/jmoiron/sqlx"
@@ -98,9 +99,9 @@ func AddGroup(group *Group, opts ...*SetOptions) (int64, error) {
 // GetGroup 获取一条群组消息
 func GetGroup(id int64, opts ...*GetOptions) (*Group, error) {
 	opt := MergeGetOptions(opts)
+	cacheKey := cacheKeyFormatGroupID(id)
 
 	if opt.UseCache() {
-		cacheKey := cacheKeyFormatGroupID(id)
 		group := new(Group)
 		value := GlobCache.Get(GlobCtx, cacheKey)
 		if value.Err() == nil && value.Val() != "" {
@@ -119,7 +120,6 @@ func GetGroup(id int64, opts ...*GetOptions) (*Group, error) {
 	if err != nil {
 		if errors.IsNoRecord(err) {
 			// 写入缓存,如果key不存在的话
-			var cacheKey = cacheKeyFormatGroupID(id)
 			if e := GlobCache.SetNX(GlobCtx, cacheKey, nil, jcache.DefaultEmptySetNXDuration).Err(); e != nil {
 				log.Error().Err(e).Str("err_format", fmt.Sprintf("%+v", e)).Str("cache_key", cacheKey).Msg("缓存写入失败")
 			}
@@ -128,7 +128,6 @@ func GetGroup(id int64, opts ...*GetOptions) (*Group, error) {
 	}
 
 	if opt.UpdateCache() {
-		cacheKey := cacheKeyFormatGroupID(id)
 		GlobCache.Set(GlobCtx, cacheKey, group, jcache.RandomExpirationDuration())
 	}
 
@@ -148,7 +147,7 @@ type UpdateGroupData struct {
 func UpdateGroup(groupID int64, data *UpdateGroupData, opts ...*SetOptions) error {
 	opt := MergeSetOptions(opts)
 
-	if utils.Equal(nil, data.Name, data.MaxMember, data.OwnerID, data.SpeakStatus) {
+	if goutils.EqualAll(nil, data.Name, data.MaxMember, data.OwnerID, data.SpeakStatus) {
 		return errors.Wrap(errors.NotChange)
 	}
 
@@ -205,7 +204,7 @@ func UpdateGroup(groupID int64, data *UpdateGroupData, opts ...*SetOptions) erro
 
 // UpdateGroupTx 使用事务方式更新群信息
 func UpdateGroupTx(groupID int64, data *UpdateGroupData) (err error) {
-	if utils.Equal(nil, data.Name, data.MaxMember, data.OwnerID, data.SpeakStatus) {
+	if goutils.EqualAll(nil, data.Name, data.MaxMember, data.OwnerID, data.SpeakStatus) {
 		return errors.Wrap(errors.NotChange)
 	}
 
@@ -539,6 +538,7 @@ func GetGroupMembers(groupID int64, memberIDs []int64, opts ...*GetOptions) ([]*
 func GetGroupMember(groupID, memberID int64, opts ...*GetOptions) (*GroupMember, error) {
 	opt := MergeGetOptions(opts)
 	member := new(GroupMember)
+
 	if opt.UseCache() {
 		cacheKey := cacheKeyFormatGroupMembers(groupID)
 		exists := GlobCache.Exists(GlobCtx, cacheKey).Val()
@@ -655,7 +655,7 @@ func CreateGroupTx(creatorID int64, memberIDs []int64) (group *Group, err error)
 	}()
 
 	userIDs := []int64{creatorID}
-	err = utils.SliceUnique(memberIDs, &memberIDs)
+	err = goutils.SliceUnique(memberIDs, &memberIDs)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
